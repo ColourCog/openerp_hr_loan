@@ -195,6 +195,7 @@
     <!--<menuitem action="action_hr_loan_form" id="menu_hr_loan" parent="menu_hr_config_employeess" sequence="40" />--> 
     <menuitem action="action_hr_loan_form" id="hr_menu_hr_loan" parent="hr.menu_hr_main" sequence="90" /> 
   
+        <!-- Loan tree filtered by employee -->
         <record id="act_hr_employee_loan_list" model="ir.actions.act_window">
             <field name="res_model">hr.loan</field>
             <field name="name">loans</field>
