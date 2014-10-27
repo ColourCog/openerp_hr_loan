@@ -14,16 +14,17 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-class hr_expense_line(osv.osv):
-  _inherit = 'hr.expense.line' 
-  _columns = { 
-    'loan_id' : fields.many2one('hr.expense.loan', 'Loan', required=False),
-  }
-
-class hr_expense_loan(osv.osv):
-  _name = 'hr.expense.loan' 
-  _inherit = ['mail.thread', 'ir.needaction_mixin'] 
-  _description = 'HR Loan Management' 
+class hr_loan(osv.osv):
+    _name = 'hr.loan' 
+    _inherit = ['mail.thread', 'ir.needaction_mixin'] 
+    _description = 'HR Loan Management' 
+    _track = {
+        'state': {
+          'hr_expense.mt_expense_approved': lambda self, cr, uid, obj, ctx=None: obj['state'] == 'accepted',
+          'hr_expense.mt_expense_refused': lambda self, cr, uid, obj, ctx=None: obj['state'] == 'cancelled',
+          'hr_expense.mt_expense_confirmed': lambda self, cr, uid, obj, ctx=None: obj['state'] == 'confirm',
+        },
+    }
   
   def _balance(self, cr, uid, ids, field_name, args, context=None): 
     res = {} 
@@ -42,7 +43,7 @@ class hr_expense_loan(osv.osv):
       expense_line[line.loan_id.id] = True 
       expense_line_ids = [] 
       if expense_line: 
-        expense_line_ids = self.pool.get('hr.expense.loan').search(cr, uid, [('id','in',expense_line.keys())], context=context) 
+        expense_line_ids = self.pool.get('hr.loan').search(cr, uid, [('id','in',expense_line.keys())], context=context) 
     return expense_line_ids 
   
   _columns = { 
@@ -139,7 +140,7 @@ class hr_expense_loan(osv.osv):
                   type='float', 
                   multi=True, 
                   store={ 
-                    'hr.expense.loan': (
+                    'hr.loan': (
                       lambda self, cr, uid, ids, c={}: 
                         ids, ['notes', 'amount','state','expense_line_ids'], 10), 
                     'hr.expense.line': (
@@ -155,7 +156,7 @@ class hr_expense_loan(osv.osv):
                   type='boolean', 
                   multi=True, 
                   store={ 
-                    'hr.expense.loan': (
+                    'hr.loan': (
                       lambda self, cr, uid, ids, c={}: 
                         ids, ['notes','amount','state','expense_line_ids'], 10), 
                     'hr.expense.line': (
@@ -212,8 +213,8 @@ class hr_expense_loan(osv.osv):
     if 'employee_id' in vals and vals['employee_id']: 
       employee = self.pool.get('hr.employee').browse(cr, uid, [vals['employee_id']])[0] 
       if vals.get('name','/') == '/':
-            vals['name'] = self.pool.get('ir.sequence').get(cr, uid, 'hr.expense.loan') or '/'
-    return super(hr_expense_loan, self).create(cr, uid, vals, context=context)
+            vals['name'] = self.pool.get('ir.sequence').get(cr, uid, 'hr.loan') or '/'
+    return super(hr_loan, self).create(cr, uid, vals, context=context)
 
   def action_approve(self, cr, uid, ids, context=None):
     for rec in self.browse(cr, uid, ids, context=context): 

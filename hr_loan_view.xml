@@ -1,9 +1,9 @@
 <openerp>
   <data>
 
-    <record id="view_hr_expense_loan_tree" model="ir.ui.view">
-      <field name="name">hr.expense.loan.tree</field> 
-      <field name="model">hr.expense.loan</field> 
+    <record id="view_hr_loan_tree" model="ir.ui.view">
+      <field name="name">hr.loan.tree</field> 
+      <field name="model">hr.loan</field> 
       <field name="type">tree</field> 
       <field name="priority">2</field> 
       <field name="arch" type="xml"> 
@@ -20,9 +20,9 @@
       </field> 
     </record>
 
-    <record id="view_hr_expense_loan_form" model="ir.ui.view"> 
-      <field name="name">hr.expense.loan.form</field> 
-      <field name="model">hr.expense.loan</field> 
+    <record id="view_hr_loan_form" model="ir.ui.view"> 
+      <field name="name">hr.loan.form</field> 
+      <field name="model">hr.loan</field> 
       <field name="type">form</field> 
       <field name="arch" type="xml"> 
         <form string="Employee Loans" version="7.0"> 
@@ -108,9 +108,9 @@
         </form> 
       </field> 
     </record> 
-    <record id="view_hr_expense_loan_filter" model="ir.ui.view"> 
-      <field name="name">hr.expense.loan.filter</field> 
-      <field name="model">hr.expense.loan</field> 
+    <record id="view_hr_loan_filter" model="ir.ui.view"> 
+      <field name="name">hr.loan.filter</field> 
+      <field name="model">hr.loan</field> 
       <field name="type">search</field> 
       <field name="arch" type="xml"> 
         <search string="Search Loans"> 
@@ -171,9 +171,9 @@
         </search> 
       </field> 
     </record> 
-    <record model="ir.ui.view" id="view_hr_expense_loan_graph"> 
-      <field name="name">hr.expense.loan.graph</field> 
-      <field name="model">hr.expense.loan</field> 
+    <record model="ir.ui.view" id="view_hr_loan_graph"> 
+      <field name="name">hr.loan.graph</field> 
+      <field name="model">hr.loan</field> 
       <field name="type">graph</field> 
       <field name="arch" type="xml"> 
         <graph string="Expense" type="bar"> 
@@ -182,18 +182,18 @@
         </graph> 
       </field> 
     </record> 
-    <record id="action_hr_expense_loan_form" model="ir.actions.act_window"> 
+    <record id="action_hr_loan_form" model="ir.actions.act_window"> 
       <field name="name">Employees Loans</field> 
       <field name="type">ir.actions.act_window</field> 
-      <field name="res_model">hr.expense.loan</field> 
+      <field name="res_model">hr.loan</field> 
       <field name="view_type">form</field> 
       <field name="view_mode">tree,form,graph</field> 
-      <field name="search_view_id" ref="view_hr_expense_loan_filter"/> 
+      <field name="search_view_id" ref="view_hr_loan_filter"/> 
       <field name="help">Employee Loans</field> 
     </record> 
     
-    <!--<menuitem action="action_hr_expense_loan_form" id="menu_hr_expense_loan" parent="menu_hr_config_employeess" sequence="40" />--> 
-    <menuitem action="action_hr_expense_loan_form" id="hr_menu_hr_expense_loan" parent="hr.menu_hr_main" sequence="90" /> 
+    <!--<menuitem action="action_hr_loan_form" id="menu_hr_loan" parent="menu_hr_config_employeess" sequence="40" />--> 
+    <menuitem action="action_hr_loan_form" id="hr_menu_hr_loan" parent="hr.menu_hr_main" sequence="90" /> 
   
   </data>
 </openerp>

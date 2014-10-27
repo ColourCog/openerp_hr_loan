@@ -1,1 +1,1 @@
-import hr_expense_loan
+import hr_loan

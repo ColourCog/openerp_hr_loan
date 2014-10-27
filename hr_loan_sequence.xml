@@ -2,15 +2,15 @@
 <openerp>
     <data noupdate="1">
 
-        <!-- Sequences for hr.expense.loan -->
-        <record id="seq_type_hr_expense_loan" model="ir.sequence.type">
+        <!-- Sequences for hr.loan -->
+        <record id="seq_type_hr_loan" model="ir.sequence.type">
             <field name="name">HR Loan</field>
-            <field name="code">hr.expense.loan</field>
+            <field name="code">hr.loan</field>
         </record>
 
         <record id="seq_hr_loan" model="ir.sequence">
             <field name="name">HR Loan</field>
-            <field name="code">hr.expense.loan</field>
+            <field name="code">hr.loan</field>
             <field name="prefix">HL</field>
             <field name="padding">3</field>
             <field name="company_id" eval="False"/>

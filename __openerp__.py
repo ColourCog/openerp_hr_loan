@@ -10,8 +10,8 @@
     "description" : "Management for Employee Loans",
     "data" : [ 
       'security/hr_loan_security.xml', 
-      'hr_expense_loan_view.xml', 
-      'hr_expense_loan_sequence.xml', 
+      'hr_loan_view.xml', 
+      'hr_loan_sequence.xml', 
     ], 
     "application": False, 
     "installable": True
