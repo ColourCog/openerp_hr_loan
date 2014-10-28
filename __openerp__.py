@@ -5,7 +5,7 @@
     "complexity" : "normal", 
     "author" : "ColourCog.com", 
     "website" : "http://colourcog.com", 
-    "depends" : ["base", "hr", "hr_contract", "hr_expense"], 
+    "depends" : ["base", "hr", "hr_contract", "hr_payroll"], 
     "summary" : "Management for Employee Loans", 
     "description" : "Management for Employee Loans",
     "data" : [ 
