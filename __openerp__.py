@@ -11,6 +11,7 @@
     "data" : [ 
       'security/hr_loan_security.xml', 
       'hr_loan_view.xml', 
+      'hr_view.xml', 
       'hr_loan_sequence.xml', 
     ], 
     "application": False, 
