@@ -2,17 +2,19 @@
 # vim: set fileencoding=utf-8 :
 
 
-from openerp.osv import osv, fields
-import time
 from datetime import datetime, date
+from openerp import netsvc
+from openerp.osv import fields, osv
 from openerp.tools.translate import _
-from tools import DEFAULT_SERVER_DATE_FORMAT, DEFAULT_SERVER_DATETIME_FORMAT, float_compare
-import decimal_precision as dp
-import netsvc
-import logging
+import openerp.addons.decimal_precision as dp
 
-_logger = logging.getLogger(__name__)
-
+def _employee_get(obj, cr, uid, context=None):
+    if context is None:
+        context = {}
+    ids = obj.pool.get('hr.employee').search(cr, uid, [('user_id', '=', uid)], context=context)
+    if ids:
+        return ids[0]
+    return False
 
 class hr_loan(osv.osv):
     _name = 'hr.loan' 
@@ -37,25 +39,20 @@ class hr_loan(osv.osv):
             } 
         return res 
 
+    def _get_paid_loans(self, cr, uid, ids, context=None):
+        res = { this.id : True for this in self.browse(cr, uid, ids, context=context)
+                if this.balance = 0 }
+        return res.keys()
+
     _columns = { 
         'name' : fields.char('Name', size=64, select=True, readonly=True), 
-        'description' : fields.char('Description', size=128, select=True, required=True, readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}), 
         'date' : fields.date('Date', required=True, select=True, readonly=True, states={'draft':[('readonly',False)], 'accepted':[('readonly',False)]}), 
         'employee_id' : fields.many2one('hr.employee', 'Employee', required=True, readonly=True, states={'draft':[('readonly',False)]}), 
         'user_id': fields.many2one('res.users', 'User', required=True),
-        'notes' : fields.text('Notes'), 
+        'notes' : fields.text('Description', required=True, readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
         'amount' : fields.float('Amount', digits_compute=dp.get_precision('Sale Price'), required=True, readonly=True, states={'draft':[('readonly',False)]]}), 
-        'reimbursement_type' : fields.selection([
-                ('fixed', 'Fixed'), 
-                ('percent', 'Loan Percentage'), 
-                ], 
-                'Reimbursement Type', 
-                readonly=True, states={'draft':[('readonly',False)]01}, required=True, 
-                help='Select \'Fixed\' to input a fixed periodic reimbursement amount.\n\
-                Select \'Percent\' to input periodic reimbursement as a percentage of total Loan Amount', 
-                select=True),
-        'percent_reimbursement' : fields.float('Percent (%)', digits_compute=dp.get_precision('Sale Price'), required=False, help="Please set percent as 10.00%", readonly=True, states={'draft':[('readonly',False)], }), 
-        'fixed_reimbursement' : fields.float('Fixed Reimbursement', digits_compute=dp.get_precision('Sale Price'), required=False, readonly=True, states={'draft':[('readonly',False)]}), 
+        'nb_payments': fields.integer("Number of payments"),
+        'installment' : fields.float('Due amount per payment', digits_compute=dp.get_precision('Sale Price'), required=True, readonly=True), 
         'balance' : fields.float('Balance', digits_compute=dp.get_precision('Sale Price'), required=True, readonly=True), 
         'date_confirm': fields.date('Confirmation Date', select=True, help="Date of the confirmation of the sheet expense. It's filled when the button Confirm is pressed."),
         'date_valid': fields.date('Validation Date', select=True, help="Date of the acceptation of the sheet expense. It's filled when the button Accept is pressed."),
@@ -105,6 +102,14 @@ class hr_loan(osv.osv):
 
     def loan_canceled(self, cr, uid, ids, context=None):
         return self.write(cr, uid, ids, {'state': 'cancelled'}, context=context)
+
+    def condition_paid(self, cr, uid, ids, context=None):
+        ok = True
+        for l in self.browse(cr, uid, ids, context=context):
+            for p in this.project_ids:
+                if l.balance > 0:
+                    ok = False
+        return ok
 
     def create(self, cr, uid, vals, context=None):
         values = vals 
