@@ -8,6 +8,7 @@ from openerp.osv import fields, osv
 from openerp.tools.translate import _
 import openerp.addons.decimal_precision as dp
 
+#TODO: automate balance and installment calculation on save
 def _employee_get(obj, cr, uid, context=None):
     if context is None:
         context = {}
