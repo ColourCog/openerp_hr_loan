@@ -9,7 +9,6 @@ from openerp.osv import fields, osv
 from openerp.tools.translate import _
 
 class hr_employee(osv.osv):
-    """ hérite de Partner et ajoute les informations de passif et actif. """
     _inherit = "hr.employee"
     def _calculate_total_loan(self, cr, uid, ids, name, args, context):
         if not ids: return {}
@@ -21,8 +20,8 @@ class hr_employee(osv.osv):
             cr.execute( 'SELECT SUM(balance) '\
                         'FROM hr_loan '\
                         'WHERE employee_id = %s '\
-                        'AND NOT paid',
-                         (employee.id,))
+                        'AND state != %s',
+                         (employee.id, 'paid'))
             result = dict(cr.dictfetchone())
             res[employee.id] = {'due': result['sum']}
         return res
