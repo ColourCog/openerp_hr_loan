@@ -5,25 +5,5 @@
       <field name="description">Helps you manage HR loans.</field>
       <field name="sequence">2</field>
     </record>
-    <record id="group_expense_loan_approve" model="res.groups">
-      <field name="name">Can Approve Driver Loans</field>
-      <field name="category_id" ref="module_category_hr_loan_management"/> 
-      <field name="comment">The user will be able to Approve Employees Loans Records.</field> 
-    </record> 
-    <record id="group_expense_loan_confirm" model="res.groups"> 
-      <field name="name">Can Confirm Employees Loans</field> 
-      <field name="category_id" ref="module_category_hr_loan_management"/> 
-      <field name="comment">The user will be able to Confirm Employees Loans Records.</field> 
-    </record> 
-    <record id="group_expense_loan_cancel" model="res.groups"> 
-      <field name="name">Can Cancel Employees Loans</field> 
-      <field name="category_id" ref="module_category_hr_loan_management"/> 
-      <field name="comment">The user will be able to Cancel Employees Loans Records.</field> 
-    </record> 
-    <record id="group_expense_loan_close" model="res.groups"> 
-      <field name="name">Can Close Employees Loans</field> 
-      <field name="category_id" ref="module_category_hr_loan_management"/> 
-      <field name="comment">The user will be able to Set to Draft Employees Loans Records.</field> 
-    </record>
   </data>
 </openerp>
