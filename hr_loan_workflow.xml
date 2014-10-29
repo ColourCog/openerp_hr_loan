@@ -6,7 +6,7 @@
 
         <record id="wkf_loans" model="workflow">
             <field name="name">hr.wkf.loans</field>
-            <field name="osv">hr.loan.loan</field>
+            <field name="osv">hr.loan</field>
             <field name="on_create">True</field>
         </record>
 
@@ -15,7 +15,7 @@
             <field name="name">draft</field>
             <field name="flow_start">True</field>
             <field name="kind">function</field>
-            <field name="action">write({'state': 'draft'})</field>
+            <field name="action">loan_draft()</field>
         </record>
 
         <record id="act_confirm" model="workflow.activity">

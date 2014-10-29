@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+  <data noupdate ="1">
+
+    <!-- After installation of the module, open the related menu -->
+    <record id="action_hr_loan_menu" model="ir.actions.client">
+      <field name="name">Open HR Loan menu</field>
+      <field name="tag">reload</field>
+      <field name="params" eval="{'menu_id': ref('hr_menu_hr_loan')}"/>
+    </record>
+  
+    <record id="base.open_menu" model="ir.actions.todo">
+      <field name="action_id" ref="action_hr_loan_menu"/>
+      <field name="state">open</field>
+    </record>
+  
+  </data>
+  
+  <data noupdate="0">
+    <!-- Requests Links -->
+    <record id="req_link_hr_loan" model="res.request.link">
+      <field name="name">HR Loan</field>
+      <field name="object">hr.loan</field>
+    </record>
+
+
+    <!-- HR Loan-related subtypes for messaging / Chatter -->
+    <record id="mt_loan_draft" model="mail.message.subtype">
+      <field name="name">Loan Draft</field>
+      <field name="res_model">hr.loan</field>
+      <field name="default" eval="False"/>
+      <field name="description">Loan Draft created</field>
+    </record>
+
+    <record id="mt_loan_confirmed" model="mail.message.subtype">
+      <field name="name">Loan Request</field>
+      <field name="res_model">hr.loan</field>
+      <field name="default" eval="False"/>
+      <field name="description">Loan Request created</field>
+    </record>
+
+    <record id="mt_loan_accepted" model="mail.message.subtype">
+      <field name="name">Loan Accepted</field>
+      <field name="res_model">hr.loan</field>
+      <field name="default" eval="False"/>
+      <field name="description">Loan Request accepted</field>
+    </record>
+
+    <record id="mt_loan_refused" model="mail.message.subtype">
+      <field name="name">Loan Refused</field>
+      <field name="res_model">hr.loan</field>
+      <field name="default" eval="False"/>
+      <field name="description">Loan Request refused</field>
+    </record>
+
+
+  </data>
+</openerp>

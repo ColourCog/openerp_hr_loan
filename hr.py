@@ -7,6 +7,7 @@
 
 from openerp.osv import fields, osv
 from openerp.tools.translate import _
+import openerp.addons.decimal_precision as dp
 
 class hr_employee(osv.osv):
     _inherit = "hr.employee"
@@ -23,7 +24,7 @@ class hr_employee(osv.osv):
                         'AND state != %s',
                          (employee.id, 'paid'))
             result = dict(cr.dictfetchone())
-            res[employee.id] = {'due': result['sum']}
+            res[employee.id] = {'basic': result['sum']}
         return res
     _columns = {
         "loan_ids": fields.one2many("hr.loan", "employee_id", "Loans"),

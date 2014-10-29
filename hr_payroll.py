@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
-#  hr_employee.py
+#  hr_payroll.py
 #  
 
 
@@ -10,12 +10,29 @@ from openerp.tools.translate import _
 
 #TODO: 
 # create custom salary rule in data.xml using installments
-# create reimbursment function using 
+# salary rule should be able to generate journal entries crediting
+# the (OHADA) asset account used from the (OHADA) salary expense account
+# using the employee name and loan name as reference
+
 # trigger balance calculation on payslip validation 'only'
 # loan visual feedback in payslip interfaceSS
 
-class hr_payroll(osv.osv):
-    _inherit = "hr.payroll"
+class hr_payslip(osv.osv):
+    _inherit = "hr.payslip"
 
-hr_payroll()
+    def process_sheet(self, cr, uid, ids, context=None):
+        obj_hr_loan = self.pool.get('hr.loan')
+        for ps in self.browse(cr, uid, ids, context=context):
+            for loan in ps.employee_id.loans:
+                if loan.state == "done":
+                    obj_hr_loan.decrease_balance(self,cr, uid, [loan.id], context=context)
+        return self.write(cr, uid, ids, {'paid': True, 'state': 'done'}, context=context)
+
+   def unlink(self, cr, uid, ids, context=None):
+        for rec in self.browse(cr, uid, ids, context=context):
+            if rec.state != 'draft':
+                raise osv.except_osv(_('Warning!'),_('You can only delete draft expenses!'))
+        return super(hr_payslip, self).unlink(cr, uid, ids, context)
+
+hr_payslip()
 

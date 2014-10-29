@@ -5,19 +5,17 @@
       <field name="name">hr.loan.tree</field> 
       <field name="model">hr.loan</field> 
       <field name="type">tree</field> 
-      <field name="priority">2</field> 
       <field name="arch" type="xml"> 
-        <tree string="Employee Loans" colors="red:state=='draft';gray:state=='cancelled';green:state=='accepted';blue:state=='confirm';"> 
+        <tree string="Employee Loans" colors="gray:state=='cancelled';green:state=='accepted';blue:state=='confirm'"> 
           <field name="employee_id"/> 
           <field name="date"/> 
-          <field name="product_id"/> 
-          <field name="amount" sum="Amount"/> 
-          <field name="balance" sum="Balance"/>
+          <field name="amount" /> 
+          <field name="balance" />
           <field name="state"/> 
         </tree> 
       </field> 
     </record>
-
+    
     <record id="view_hr_loan_form" model="ir.ui.view"> 
       <field name="name">hr.loan.form</field> 
       <field name="model">hr.loan</field> 
@@ -45,13 +43,18 @@
               <group>
                 <field name="amount"/>
                 <field name="nb_payments"/>
-                <field name="installments" readonly="1"/>
+                <field name="installment" readonly="1"/>
               </group>
             </group>
             <notebook>
                 <page string="Description">
+                  <field name="notes" />
+                </page>
+                <page string="Accounting" attrs="{'invisible': [('state','=','draft'),('state','=','confirm')]}">
                   <group>
-                    <field name="description" >
+                    <field name="account_debit" />
+                    <field name="account_credit" />
+                    <field name="journal_id" />
                   </group>
                 </page>
             </notebook>
@@ -64,6 +67,7 @@
         </form> 
       </field> 
     </record> 
+    
     <record id="view_hr_loan_filter" model="ir.ui.view"> 
       <field name="name">hr.loan.filter</field> 
       <field name="model">hr.loan</field> 
@@ -124,7 +128,7 @@
     
     <record id="action_hr_loan_form" model="ir.actions.act_window"> 
       <field name="name">Employees Loans</field> 
-      <field name="type">ir.actions.act_winEmployeedow</field> 
+      <field name="type">ir.actions.act_window</field> 
       <field name="res_model">hr.loan</field> 
       <field name="view_type">form</field> 
       <field name="view_mode">tree,form,graph</field> 
