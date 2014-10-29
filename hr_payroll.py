@@ -28,11 +28,11 @@ class hr_payslip(osv.osv):
                     obj_hr_loan.decrease_balance(cr, uid, [loan.id], context)
         return self.write(cr, uid, ids, {'paid': True, 'state': 'done'}, context)
 
-    def unlink(self, cr, uid, ids, context=None):
-        for rec in self.browse(cr, uid, ids, context=context):
-            if rec.state != 'draft':
-                raise osv.except_osv(_('Warning!'),_('You can only delete draft expenses!'))
-        return super(hr_payslip, self).unlink(cr, uid, ids, context)
+    #~ def unlink(self, cr, uid, ids, context=None):
+        #~ for rec in self.browse(cr, uid, ids, context=context):
+            #~ if rec.state != 'draft':
+                #~ raise osv.except_osv(_('Warning!'),_('You can only delete draft expenses!'))
+        #~ return super(hr_payslip, self).unlink(cr, uid, ids, context)
 
 hr_payslip()
 
