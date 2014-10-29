@@ -23,12 +23,12 @@ class hr_payslip(osv.osv):
     def process_sheet(self, cr, uid, ids, context=None):
         obj_hr_loan = self.pool.get('hr.loan')
         for ps in self.browse(cr, uid, ids, context=context):
-            for loan in ps.employee_id.loans:
+            for loan in ps.employee_id.loan_ids:
                 if loan.state == "done":
-                    obj_hr_loan.decrease_balance(self,cr, uid, [loan.id], context=context)
-        return self.write(cr, uid, ids, {'paid': True, 'state': 'done'}, context=context)
+                    obj_hr_loan.decrease_balance(cr, uid, [loan.id], context)
+        return self.write(cr, uid, ids, {'paid': True, 'state': 'done'}, context)
 
-   def unlink(self, cr, uid, ids, context=None):
+    def unlink(self, cr, uid, ids, context=None):
         for rec in self.browse(cr, uid, ids, context=context):
             if rec.state != 'draft':
                 raise osv.except_osv(_('Warning!'),_('You can only delete draft expenses!'))

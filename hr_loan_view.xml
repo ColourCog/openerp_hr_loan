@@ -46,6 +46,9 @@
                 <field name="installment" readonly="1"/>
               </group>
             </group>
+            <group>
+                <field name="balance" readonly="1"/>
+            </group>
             <notebook>
                 <page string="Description">
                   <field name="notes" />
