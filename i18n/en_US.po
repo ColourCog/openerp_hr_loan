@@ -1,0 +1,389 @@
+# Translation of OpenERP Server.
+# This file contains the translation of the following modules:
+#	* hr_loan
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OpenERP Server 7.0-20140804-231303\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2014-10-29 20:02+0000\n"
+"PO-Revision-Date: 2014-10-29 20:02+0000\n"
+"Last-Translator: <>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: hr_loan
+#: field:hr.employee,total_loan:0
+msgid "Total Pending Loans"
+msgstr "Total Pending Loans"
+
+#. module: hr_loan
+#: model:ir.actions.act_window,name:hr_loan.action_hr_loan_form
+#: model:ir.ui.menu,name:hr_loan.hr_menu_hr_loan
+msgid "Employees Loans"
+msgstr "Employees Loans"
+
+#. module: hr_loan
+#: model:mail.message.subtype,description:hr_loan.mt_loan_draft
+msgid "Loan Draft created"
+msgstr "Loan Draft created"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Submit to Manager"
+msgstr "Submit to Manager"
+
+#. module: hr_loan
+#: field:hr.loan,installment:0
+msgid "Due amount per payment"
+msgstr "Due amount per payment"
+
+#. module: hr_loan
+#: field:hr.loan,date_confirm:0
+msgid "Confirmation Date"
+msgstr "Confirmation Date"
+
+#. module: hr_loan
+#: help:hr.loan,date_valid:0
+msgid "Date of the acceptation of the loan. It's filled when the button Accept is pressed."
+msgstr "Date of the acceptation of the loan. It's filled when the button Accept is pressed."
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "State"
+msgstr "State"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Draft"
+msgstr "Draft"
+
+#. module: hr_loan
+#: model:mail.message.subtype,name:hr_loan.mt_loan_draft
+msgid "Loan Draft"
+msgstr "Loan Draft"
+
+#. module: hr_loan
+#: model:mail.message.subtype,description:hr_loan.mt_loan_confirmed
+msgid "Loan Request created"
+msgstr "Loan Request created"
+
+#. module: hr_loan
+#: view:hr.loan:0
+#: field:hr.loan,employee_id:0
+#: model:ir.model,name:hr_loan.model_hr_employee
+msgid "Employee"
+msgstr "Employee"
+
+#. module: hr_loan
+#: model:mail.message.subtype,description:hr_loan.mt_loan_accepted
+msgid "Loan Request accepted"
+msgstr "Loan Request accepted"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Waiting approval"
+msgstr "Waiting approval"
+
+#. module: hr_loan
+#: selection:hr.loan,state:0
+msgid "Refused"
+msgstr "Refused"
+
+#. module: hr_loan
+#: field:hr.loan,user_valid:0
+msgid "Validation By"
+msgstr "Validation By"
+
+#. module: hr_loan
+#: field:hr.loan,state:0
+msgid "Status"
+msgstr "Status"
+
+#. module: hr_loan
+#: model:ir.module.category,name:hr_loan.module_category_hr_loan_management
+msgid "HR LOAN"
+msgstr "HR LOAN"
+
+#. module: hr_loan
+#: view:hr.loan:0
+#: field:hr.loan,notes:0
+msgid "Description"
+msgstr "Description"
+
+#. module: hr_loan
+#: field:hr.loan,account_move_id:0
+msgid "Ledger Posting"
+msgstr "Ledger Posting"
+
+#. module: hr_loan
+#: model:ir.actions.client,name:hr_loan.action_hr_loan_menu
+msgid "Open HR Loan menu"
+msgstr "Open HR Loan menu"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Open Accounting Entries"
+msgstr "Open Accounting Entries"
+
+#. module: hr_loan
+#: field:hr.loan,company_id:0
+msgid "Company"
+msgstr "Company"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Generate Accounting Entries"
+msgstr "Generate Accounting Entries"
+
+#. module: hr_loan
+#: view:hr.loan:0
+#: field:hr.loan,date_valid:0
+msgid "Validation Date"
+msgstr "Validation Date"
+
+#. module: hr_loan
+#: help:hr.loan,account_credit:0
+msgid "The account in which the loan will be paid to the employee"
+msgstr "The account in which the loan will be paid to the employee"
+
+#. module: hr_loan
+#: view:hr.loan:0
+#: selection:hr.loan,state:0
+msgid "Paid"
+msgstr "Paid"
+
+#. module: hr_loan
+#: model:mail.message.subtype,name:hr_loan.mt_loan_confirmed
+msgid "Loan Request"
+msgstr "Loan Request"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Search Loans"
+msgstr "Search Loans"
+
+#. module: hr_loan
+#: field:hr.loan,journal_id:0
+msgid "Force Journal"
+msgstr "Force Journal"
+
+#. module: hr_loan
+#: field:hr.loan,message_is_follower:0
+msgid "Is a Follower"
+msgstr "Is a Follower"
+
+#. module: hr_loan
+#: field:hr.loan,user_id:0
+msgid "User"
+msgstr "User"
+
+#. module: hr_loan
+#: model:ir.module.category,description:hr_loan.module_category_hr_loan_management
+msgid "Helps you manage HR loans."
+msgstr "Helps you manage HR loans."
+
+#. module: hr_loan
+#: field:hr.loan,date:0
+msgid "Date"
+msgstr "Date"
+
+#. module: hr_loan
+#: field:hr.loan,nb_payments:0
+msgid "Number of payments"
+msgstr "Number of payments"
+
+#. module: hr_loan
+#: view:hr.loan:0
+#: selection:hr.loan,state:0
+msgid "Accepted"
+msgstr "Accepted"
+
+#. module: hr_loan
+#: view:hr.employee:0
+#: field:hr.employee,loan_ids:0
+#: model:ir.actions.act_window,name:hr_loan.act_hr_employee_loan_list
+msgid "Loans"
+msgstr "Loans"
+
+#. module: hr_loan
+#: model:mail.message.subtype,name:hr_loan.mt_loan_refused
+msgid "Loan Refused"
+msgstr "Loan Refused"
+
+#. module: hr_loan
+#: view:hr.loan:0
+#: selection:hr.loan,state:0
+msgid "Waiting Payment"
+msgstr "Waiting Payment"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Refuse"
+msgstr "Refuse"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Share a message..."
+msgstr "Share a message..."
+
+#. module: hr_loan
+#: field:hr.loan,name:0
+msgid "Name"
+msgstr "Name"
+
+#. module: hr_loan
+#: view:hr.loan:0
+#: model:ir.actions.act_window,help:hr_loan.action_hr_loan_form
+msgid "Employee Loans"
+msgstr "Employee Loans"
+
+#. module: hr_loan
+#: model:mail.message.subtype,name:hr_loan.mt_loan_accepted
+msgid "Loan Accepted"
+msgstr "Loan Accepted"
+
+#. module: hr_loan
+#: field:hr.loan,message_ids:0
+msgid "Messages"
+msgstr "Messages"
+
+#. module: hr_loan
+#: help:hr.loan,message_ids:0
+msgid "Messages and communication history"
+msgstr "Messages and communication history"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Set to Draft"
+msgstr "Set to Draft"
+
+#. module: hr_loan
+#: model:mail.message.subtype,description:hr_loan.mt_loan_refused
+msgid "Loan Request refused"
+msgstr "Loan Request refused"
+
+#. module: hr_loan
+#: field:hr.loan,message_summary:0
+msgid "Summary"
+msgstr "Summary"
+
+#. module: hr_loan
+#: field:hr.loan,account_debit:0
+msgid "Debit Account"
+msgstr "Debit Account"
+
+#. module: hr_loan
+#: help:hr.loan,state:0
+msgid "When the loan request is created the status is 'Draft'.\n"
+" It is confirmed by the user and request is sent to admin, the status is 'Waiting Approval'.                \n"
+"If the admin accepts it, the status is 'Accepted'.\n"
+" If the accounting entries are made for the loan request, the status is 'Waiting Payment'."
+msgstr "When the loan request is created the status is 'Draft'.\n"
+" It is confirmed by the user and request is sent to admin, the status is 'Waiting Approval'.                \n"
+"If the admin accepts it, the status is 'Accepted'.\n"
+" If the accounting entries are made for the loan request, the status is 'Waiting Payment'."
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Accounting"
+msgstr "Accounting"
+
+#. module: hr_loan
+#: field:hr.loan,balance:0
+msgid "Balance"
+msgstr "Balance"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Approve"
+msgstr "Approve"
+
+#. module: hr_loan
+#: help:hr.loan,message_unread:0
+msgid "If checked new messages require your attention."
+msgstr "If checked new messages require your attention."
+
+#. module: hr_loan
+#: model:ir.model,name:hr_loan.model_hr_loan
+msgid "HR Loan Management"
+msgstr "HR Loan Management"
+
+#. module: hr_loan
+#: model:res.request.link,name:hr_loan.req_link_hr_loan
+msgid "HR Loan"
+msgstr "HR Loan"
+
+#. module: hr_loan
+#: help:hr.loan,account_debit:0
+msgid "The account in which the loan will be recorded"
+msgstr "The account in which the loan will be recorded"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Group By..."
+msgstr "Group By..."
+
+#. module: hr_loan
+#: selection:hr.loan,state:0
+msgid "New"
+msgstr "New"
+
+#. module: hr_loan
+#: model:ir.model,name:hr_loan.model_hr_payslip
+msgid "Pay Slip"
+msgstr "Pay Slip"
+
+#. module: hr_loan
+#: view:hr.loan:0
+msgid "Loan"
+msgstr "Loan"
+
+#. module: hr_loan
+#: field:hr.loan,amount:0
+msgid "Amount"
+msgstr "Amount"
+
+#. module: hr_loan
+#: help:hr.loan,journal_id:0
+msgid "The journal used to record loans."
+msgstr "The journal used to record loans."
+
+#. module: hr_loan
+#: field:hr.loan,account_credit:0
+msgid "Credit Account"
+msgstr "Credit Account"
+
+#. module: hr_loan
+#: field:hr.loan,message_unread:0
+msgid "Unread Messages"
+msgstr "Unread Messages"
+
+#. module: hr_loan
+#: help:hr.loan,message_summary:0
+msgid "Holds the Chatter summary (number of messages, ...). This summary is directly in html format in order to be inserted in kanban views."
+msgstr "Holds the Chatter summary (number of messages, ...). This summary is directly in html format in order to be inserted in kanban views."
+
+#. module: hr_loan
+#: help:hr.employee,total_loan:0
+msgid "Sum of all loans of employee."
+msgstr "Sum of all loans of employee."
+
+#. module: hr_loan
+#: field:hr.loan,message_follower_ids:0
+msgid "Followers"
+msgstr "Followers"
+
+#. module: hr_loan
+#: selection:hr.loan,state:0
+msgid "Waiting Approval"
+msgstr "Waiting Approval"
+
+#. module: hr_loan
+#: help:hr.loan,date_confirm:0
+msgid "Date of the confirmation of the loan. It's filled when the button Submit is pressed."
+msgstr "Date of the confirmation of the loan. It's filled when the button Submit is pressed."
+

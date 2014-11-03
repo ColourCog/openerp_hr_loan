@@ -1,20 +1,25 @@
 {
     "name" : "Loan Management",
     "version" : "1.0", 
-    "category" : "HR", 
+    "category" : "Human Resources", 
     "complexity" : "normal", 
     "author" : "ColourCog.com", 
     "website" : "http://colourcog.com", 
     "depends" : [
         "base", 
         "hr", 
-        "hr_contract", 
         "hr_payroll",
         "hr_payroll_account",
         "account",
     ], 
     "summary" : "Management for Employee Loans", 
-    "description" : "Management for Employee Loans",
+    "description" : """
+Employee Loan Management
+========================
+This module adds loan management capabilities to the Human Rssources section
+in OpenERP.
+
+    """,
     "data" : [ 
       'security/hr_loan_security.xml', 
       'hr_loan_view.xml', 

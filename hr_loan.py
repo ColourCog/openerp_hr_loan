@@ -56,12 +56,12 @@ class hr_loan(osv.osv):
         'nb_payments': fields.integer("Number of payments", required=True, readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
         'installment' : fields.float('Due amount per payment', digits_compute=dp.get_precision('Sale Price'), required=True, readonly=True), 
         'balance' : fields.float('Balance', digits_compute=dp.get_precision('Sale Price'), required=True, readonly=True), 
-        'journal_id': fields.many2one('account.journal', 'Force Journal', help = "The journal used to record loans."),
+        'journal_id': fields.many2one('account.journal', 'Force Journal', readonly=True, states={'accepted':[('readonly',False)]}, help = "The journal used to record loans."),
         'account_debit': fields.many2one('account.account', 'Debit Account', readonly=True, states={'accepted':[('readonly',False)]}, help="The account in which the loan will be recorded"),
         'account_credit': fields.many2one('account.account', 'Credit Account', readonly=True, states={'accepted':[('readonly',False)]}, help="The account in which the loan will be paid to the employee"),
         'account_move_id': fields.many2one('account.move', 'Ledger Posting'),
-        'date_confirm': fields.date('Confirmation Date', select=True, help="Date of the confirmation of the loan. It's filled when the button Confirm is pressed."),
-        'date_valid': fields.date('Validation Date', select=True, help="Date of the acceptation of the sheet expense. It's filled when the button Accept is pressed."),
+        'date_confirm': fields.date('Confirmation Date', select=True, help="Date of the confirmation of the loan. It's filled when the button Submit is pressed."),
+        'date_valid': fields.date('Validation Date', select=True, help="Date of the acceptation of the loan. It's filled when the button Accept is pressed."),
         'user_valid': fields.many2one('res.users', 'Validation By', readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
         'company_id': fields.many2one('res.company', 'Company', required=True),
         'state': fields.selection([
@@ -73,7 +73,7 @@ class hr_loan(osv.osv):
                 ('paid', 'Paid'),
                 ],
                 'Status', readonly=True, track_visibility='onchange',
-                help=_('When the loan request is created the status is \'Draft\'.\n It is confirmed by the user and request is sent to admin, the status is \'Waiting Confirmation\'.\
+                help=_('When the loan request is created the status is \'Draft\'.\n It is confirmed by the user and request is sent to admin, the status is \'Waiting Approval\'.\
                 \nIf the admin accepts it, the status is \'Accepted\'.\n If the accounting entries are made for the loan request, the status is \'Waiting Payment\'.')),
     }
 
@@ -207,7 +207,7 @@ class hr_loan(osv.osv):
 
     def action_view_receipt(self, cr, uid, ids, context=None):
         '''
-        This function returns an action that display existing account.move of given expense ids.
+        This function returns an action that display existing account.move of given loan ids.
         '''
         assert len(ids) == 1, 'This option should only be used for a single id at a time'
         loan = self.browse(cr, uid, ids[0], context=context)
