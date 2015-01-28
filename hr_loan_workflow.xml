@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
-    <data>
+    <data noupdate="0">
 
         <!-- Workflow definition -->
 
@@ -25,7 +25,7 @@
             <field name="action">loan_confirm()</field>
         </record>
 
-        <record id="act_accepted" model="workflow.activity">
+       <record id="act_accepted" model="workflow.activity">
             <field name="wkf_id" ref="wkf_loans"/>
             <field name="name">accepted</field>
             <field name="kind">function</field>

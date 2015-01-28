@@ -17,13 +17,22 @@
   </data>
   
   <data noupdate="0">
+    <record id="contrib_register_loan" model="hr.contribution.register">
+        <field name="name">Loans</field>
+        <field name="note">Loan Register</field>
+    </record>
+    <record id="hr_loan_category" model="hr.salary.rule.category">
+        <field name="parent_id" ref="hr_payroll.DED"/>
+        <field name="name">Employee Loans</field>
+        <field name="code">LOAN</field>
+    </record>
     <!-- Custom Salary rule -->
     <record id="hr_salary_rule_hr_loan" model="hr.salary.rule">
         <field name="condition_select">python</field>
         <field name="condition_python">result =  bool([ l for l in employee.loan_ids if l.state == "done"])</field>
         <field name="amount_select">code</field>
         <field name="code">LOAN</field>
-        <field name="category_id" ref="hr_payroll.DED"/>
+        <field name="category_id" ref="hr_loan_category"/>
         <field name="name">Loan Payment</field>
         <field name="sequence" eval="155"/>
         <field name="amount_python_compute">
@@ -37,6 +46,18 @@ for loan in employee.loan_ids:
 result = - l
         </field>
      </record>
+    <record id="hr_loans_rules_register" model="hr.salary.rule">
+        <field name="category_id" ref="hr_payroll.COMP"/>
+        <field name="name">Loan Register</field>
+        <field name="code">LOANREG</field>
+        <field name="sequence">156</field>
+        <field name="appears_on_payslip" eval="False"/>
+        <field name="condition_select">python</field>
+        <field name="condition_python">result =  bool([ l for l in employee.loan_ids if l.state == "done"])</field>
+        <field name="amount_select">code</field>
+        <field name="amount_python_compute">result = -categories.LOAN</field>
+        <field name="register_id" ref="contrib_register_loan"/>
+    </record>
 
     <!-- Requests Links -->
     <record id="req_link_hr_loan" model="res.request.link">
