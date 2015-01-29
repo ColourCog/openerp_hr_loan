@@ -25,7 +25,7 @@ class hr_payslip(osv.osv):
         for slip in self.browse(cr, uid, ids, context=context):
             if slip.state == "done":
                 for loan in slip.employee_id.loan_ids:
-                    if loan.state == "done":
+                    if loan.state in ["done","paid"]:
                         obj_hr_loan.increase_balance(cr, uid, [loan.id], context)
         return super(hr_payslip, self).cancel_sheet(cr, uid, ids, context=context)
 

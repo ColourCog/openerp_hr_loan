@@ -88,6 +88,7 @@
           <separator/>
           <group expand="0" string="Group By..." > 
             <filter string="Status" icon="terp-stock_effects-object-colorize" domain="[]" context="{'group_by':'state'}"/>
+            <filter string="Employee" icon="terp-stock_effects-object-colorize" domain="[]" context="{'group_by':'employee_id'}"/>
           </group> 
         </search> 
       </field> 
@@ -112,7 +113,6 @@
       <field name="view_mode">tree,form,graph</field>
       <field name="view_id" ref="view_hr_loan_tree"/> 
       <field name="search_view_id" ref="view_hr_loan_filter"/> 
-      <field name="context">{'search_default_employee_id': 0, 'default_employee_id': 0}</field>
       <field name="help" type="html">
         <p class="oe_view_nocontent_create">
           Click to create a new loan. 

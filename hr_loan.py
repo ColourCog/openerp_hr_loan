@@ -146,7 +146,10 @@ class hr_loan(osv.osv):
             if l.balance > 0:
                 ok = False
         return ok
-
+    
+    def _get_balance(self, cr, uid, ids, context=None):
+        pass
+        
     def decrease_balance(self, cr, uid, ids, context=None):
         res = []
         for loan in self.browse(cr, uid, ids):
@@ -201,6 +204,7 @@ class hr_loan(osv.osv):
             lml = []
             # create the debit move line
             lml.append({
+                    'partner_id': loan.employee_id.address_home_id.id,
                     'name': loan.employee_id.name,
                     'debit': loan.amount, 
                     'account_id': loan.account_debit.id, 
@@ -209,6 +213,7 @@ class hr_loan(osv.osv):
             
             # create the credit move line
             lml.append({
+                    'partner_id': loan.employee_id.address_home_id.id,
                     'name': loan.employee_id.name,
                     'credit': loan.amount, 
                     'account_id': loan.account_credit.id, 
