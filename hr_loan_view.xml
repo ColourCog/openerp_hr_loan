@@ -28,6 +28,7 @@
             <button name="loan_suspend" states="done" string="Suspend" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="loan_resume" states="suspended" string="Resume" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="refuse" states="confirm,accepted" string="Refuse" type="workflow" groups="base.group_hr_manager" />
+            <button name="cancel" states="done" string="Cancel" type="workflow" groups="base.group_hr_manager" />
             <button name="draft" states="confirm,cancelled" string="Set to Draft" type="workflow" groups="base.group_hr_user" />
             <button name="done" states="accepted" string="Generate Accounting Entries" type="workflow" groups="base.group_hr_user" class="oe_highlight"/>
             <button name="action_view_receipt" states="done,suspended" string="Open Accounting Entries" type="object" groups="base.group_hr_user"/>
@@ -63,6 +64,16 @@
                     <field name="journal_id" />
                   </group>
                 </page>
+                <page string="Payments">
+                  <field name="payment_ids">
+                    <tree string="Payments">
+                      <field name="loan_id" invisible="1"/>
+                      <field name="slip_id" />
+                      <field name="amount" />
+                    </tree>
+                  </field>
+                </page>
+
             </notebook>
             
           </sheet> 

@@ -17,10 +17,6 @@
   </data>
   
   <data noupdate="0">
-    <record id="contrib_register_loan" model="hr.contribution.register">
-        <field name="name">Loans</field>
-        <field name="note">Loan Register</field>
-    </record>
     <record id="hr_loan_category" model="hr.salary.rule.category">
         <field name="parent_id" ref="hr_payroll.DED"/>
         <field name="name">Employee Loans</field>
@@ -56,7 +52,7 @@ result = - l
         <field name="condition_python">result =  bool([ l for l in employee.loan_ids if l.state == "done"])</field>
         <field name="amount_select">code</field>
         <field name="amount_python_compute">result = -categories.LOAN</field>
-        <field name="register_id" ref="contrib_register_loan"/>
+        <field name="register_id" eval="False"/>
     </record>
 
     <!-- Requests Links -->

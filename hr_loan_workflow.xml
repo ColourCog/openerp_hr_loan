@@ -36,7 +36,7 @@
             <field name="wkf_id" ref="wkf_loans"/>
             <field name="name">refused</field>
             <field name="kind">function</field>
-            <field name="action">loan_canceled()</field>
+            <field name="action">loan_cancelled()</field>
         </record>
 
         <record id="act_done" model="workflow.activity">
@@ -79,6 +79,13 @@
             <field name="act_from" ref="act_accepted"/>
             <field name="act_to" ref="act_refused"/>
             <field name="signal">refuse</field>
+            <field name="group_id" ref="base.group_hr_user"/>
+        </record>
+
+        <record id="t6" model="workflow.transition">
+            <field name="act_from" ref="act_done"/>
+            <field name="act_to" ref="act_refused"/>
+            <field name="signal">cancel</field>
             <field name="group_id" ref="base.group_hr_user"/>
         </record>
 

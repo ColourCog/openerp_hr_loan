@@ -21,6 +21,21 @@ def _employee_get(obj, cr, uid, context=None):
         return ids[0]
     return False
 
+class hr_loan_payment(osv.osv):
+    _name = 'hr.loan.payment'
+    
+    _columns = {
+        'loan_id': fields.many2one('hr.loan', 'Loan', required=True),
+        'slip_id': fields.many2one('hr.payslip', 'Payslip', required=True),
+        'amount' : fields.float('Amount', digits_compute=dp.get_precision('Payroll')), 
+    }
+    _sql_constraints = [
+        ('loan_slip_unique', 'unique (loan_id, slip_id)', 'Payslips must be unique per Loan !'),
+    ]
+    
+
+hr_loan_payment()
+
 class hr_loan(osv.osv):
     _name = 'hr.loan' 
     _inherit = ['mail.thread', 'ir.needaction_mixin'] 
@@ -39,10 +54,14 @@ class hr_loan(osv.osv):
         currency_ids = cur_obj.search(cr, uid, [("name","=","XOF")], context=context)
         return currency_ids[0]
         
+    def _get_loan_from_payment(self, cr, uid, ids, context=None):
+        pay_obj = self.pool.get('hr.loan.payment')
+        return [p.loan_id.id for p in pay_obj.browse(cr, uid, ids, context=context)]
+
     def _get_paid_loans(self, cr, uid, ids, context=None):
-        res = { this.id : True for this in self.browse(cr, uid, ids, context=context)
-                if this.balance == 0 }
-        return res.keys()
+        res = [ loan.id  for loan in self.browse(cr, uid, ids, context=context)
+                if loan.amount == sum([p.amount for p in loan.payment_ids]) ]
+        return res
 
     def onchange_employee_id(self, cr, uid, ids, employee_id, context=None):
         emp_obj = self.pool.get('hr.employee')
@@ -51,6 +70,13 @@ class hr_loan(osv.osv):
             employee = emp_obj.browse(cr, uid, employee_id, context=context)
             company_id = employee.company_id.id
         return {'value': {'company_id': company_id}}
+
+    def _get_balance(self, cr, uid, ids, name, args, context):
+        if not ids: return {}
+        res = {}
+        for loan in self.browse(cr, uid, ids, context=context):
+            res[loan.id] = loan.amount - sum([payment.amount for payment in loan.payment_ids])
+        return res
 
     _columns = { 
         'name' : fields.char('Name', size=64, select=True, readonly=True), 
@@ -62,11 +88,16 @@ class hr_loan(osv.osv):
         'currency_id': fields.many2one('res.currency', 'Currency', required=True),
         'nb_payments': fields.integer("Number of payments", required=True, readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
         'installment' : fields.float('Due amount per payment', digits_compute=dp.get_precision('Payroll'), required=True, readonly=True), 
-        'balance' : fields.float('Balance', digits_compute=dp.get_precision('Payroll'), required=True, readonly=True), 
+        'payment_ids' : fields.one2many('hr.loan.payment', 'loan_id', 'Loan Payments'), 
+        'balance': fields.function(_get_balance, type='float', string='Balance', digits_compute=dp.get_precision('Payroll'),  store={
+            _name: (lambda self, cr,uid,ids,c: ids, ['payment_ids'], 10),
+            'hr.loan.payment': (_get_loan_from_payment, None,10)
+            }),
+        
         'journal_id': fields.many2one('account.journal', 'Journal', readonly=True, states={'accepted':[('readonly',False)]}, help = "The journal used to record loans."),
         'account_debit': fields.many2one('account.account', 'Debit Account', readonly=True, states={'accepted':[('readonly',False)]}, help="The account in which the loan will be recorded"),
         'account_credit': fields.many2one('account.account', 'Credit Account', readonly=True, states={'accepted':[('readonly',False)]}, help="The account in which the loan will be paid to the employee"),
-        'account_move_id': fields.many2one('account.move', 'Ledger Posting'),
+        'move_id': fields.many2one('account.move', 'Ledger Posting'),
         'date_confirm': fields.date('Confirmation Date', select=True, help="Date of the confirmation of the loan. It's filled when the button Submit is pressed."),
         'date_valid': fields.date('Validation Date', select=True, help="Date of the acceptation of the loan. It's filled when the button Accept is pressed."),
         'user_valid': fields.many2one('res.users', 'Validation By', readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
@@ -107,8 +138,8 @@ class hr_loan(osv.osv):
 
     def unlink(self, cr, uid, ids, context=None):
         for rec in self.browse(cr, uid, ids, context=context):
-            if rec.state != 'draft':
-                raise osv.except_osv(_('Warning!'),_('You can only delete draft loans!'))
+            if rec.state not in ['draft','cancelled']:
+                raise osv.except_osv(_('Warning!'),_('You must cancel the Loan before you can delete it.'))
         return super(hr_loan, self).unlink(cr, uid, ids, context)
 
     def loan_draft(self, cr, uid, ids, context=None):
@@ -131,7 +162,15 @@ class hr_loan(osv.osv):
     def loan_accept(self, cr, uid, ids, context=None):
         return self.write(cr, uid, ids, {'state': 'accepted', 'date_valid': time.strftime('%Y-%m-%d'), 'user_valid': uid}, context=context)
 
-    def loan_canceled(self, cr, uid, ids, context=None):
+    def loan_cancelled(self, cr, uid, ids, context=None):
+        pay_obj = self.pool.get('hr.loan.payment')
+        move_obj = self.pool.get('account.move')
+        for loan in self.browse(cr, uid, ids, context=context):
+            if loan.move_id:
+                move_obj.unlink(cr, uid, [loan.move_id.id], context=context)
+            if loan.payment_ids:
+                l = [p.id for p in loan.payment_ids]
+                pay_obj.unlink(cr, uid, l, context=context)
         return self.write(cr, uid, ids, {'state': 'cancelled'}, context=context)
 
     def loan_suspend(self, cr, uid, ids, context=None):
@@ -142,26 +181,11 @@ class hr_loan(osv.osv):
 
     def condition_paid(self, cr, uid, ids, context=None):
         ok = True
-        for l in self.browse(cr, uid, ids, context=context):
-            if l.balance > 0:
+        for loan in self.browse(cr, uid, ids, context=context):
+            if loan.amount != sum([payment.amount for payment in loan.payment_ids]):
                 ok = False
         return ok
-    
-    def _get_balance(self, cr, uid, ids, context=None):
-        pass
-        
-    def decrease_balance(self, cr, uid, ids, context=None):
-        res = []
-        for loan in self.browse(cr, uid, ids):
-            if loan.balance > 0 :
-                res.append(self.write(cr, uid, [loan.id], {'balance': loan.balance - loan.installment}, context=context))
-        return res
-
-    def increase_balance(self, cr, uid, ids, context=None):
-        res = []
-        for loan in self.browse(cr, uid, ids):
-            res.append(self.write(cr, uid, [loan.id], {'balance': loan.balance + loan.installment}, context=context))
-        return res
+            
         
     def account_move_get(self, cr, uid, loan_id, context=None):
         '''
@@ -191,7 +215,7 @@ class hr_loan(osv.osv):
         move_obj = self.pool.get('account.move')
         move_line_obj = self.pool.get('account.move.line')
         for loan in self.browse(cr, uid, ids, context=context):
-            if loan.account_move_id:
+            if loan.move_id:
                 continue
             if not loan.account_debit:
                 raise osv.except_osv(_('Error!'), _('You must select an account to debit for this loan'))
@@ -226,7 +250,7 @@ class hr_loan(osv.osv):
             if journal_id.entry_posted:
                 move_obj.button_validate(cr, uid, [move_id], context)
             move_obj.write(cr, uid, [move_id], {'line_id': lines}, context=context)
-            self.write(cr, uid, ids, {'account_move_id': move_id, 'state': 'done'}, context=context)
+            self.write(cr, uid, ids, {'move_id': move_id, 'state': 'done'}, context=context)
         return True
 
     def action_view_receipt(self, cr, uid, ids, context=None):
@@ -235,7 +259,7 @@ class hr_loan(osv.osv):
         '''
         assert len(ids) == 1, 'This option should only be used for a single id at a time'
         loan = self.browse(cr, uid, ids[0], context=context)
-        assert loan.account_move_id
+        assert loan.move_id
         try:
             dummy, view_id = self.pool.get('ir.model.data').get_object_reference(cr, uid, 'account', 'view_move_form')
         except ValueError, e:
@@ -249,7 +273,7 @@ class hr_loan(osv.osv):
             'type': 'ir.actions.act_window',
             'nodestroy': True,
             'target': 'current',
-            'res_id': loan.account_move_id.id,
+            'res_id': loan.move_id.id,
         }
         return result
 
