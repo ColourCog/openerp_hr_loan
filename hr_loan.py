@@ -9,6 +9,7 @@ from openerp.osv import fields, osv
 from openerp.tools.translate import _
 import openerp.addons.decimal_precision as dp
 
+
 #TODO: 
 # generate journal entries using employee name and loan name as reference
 # debit an asset account (OHADA?) and credit the cash account
@@ -58,9 +59,10 @@ class hr_loan(osv.osv):
         pay_obj = self.pool.get('hr.loan.payment')
         return [p.loan_id.id for p in pay_obj.browse(cr, uid, ids, context=context)]
 
-    def _get_paid_loans(self, cr, uid, ids, context=None):
-        res = [ loan.id  for loan in self.browse(cr, uid, ids, context=context)
-                if loan.amount == sum([p.amount for p in loan.payment_ids]) ]
+    def _get_loan_payments(self, cr, uid, ids, context=None):
+        res = []
+        for loan in self.browse(cr, uid, ids, context=context):
+            res. extend([p.id for p in loan.payment_ids])
         return res
 
     def onchange_employee_id(self, cr, uid, ids, employee_id, context=None):
@@ -71,11 +73,22 @@ class hr_loan(osv.osv):
             company_id = employee.company_id.id
         return {'value': {'company_id': company_id}}
 
+    def onchange_amount(self, cr, uid, ids, amount, nb_payments, context=None):
+        val =  amount / nb_payments
+        return {'value': {'installment': val}}
+
+    def onchange_nb_payments(self, cr, uid, ids, amount, nb_payments, context=None):
+        return self.onchange_amount(cr, uid, ids, amount, nb_payments, context=context)
+
     def _get_balance(self, cr, uid, ids, name, args, context):
         if not ids: return {}
         res = {}
         for loan in self.browse(cr, uid, ids, context=context):
             res[loan.id] = loan.amount - sum([payment.amount for payment in loan.payment_ids])
+            if loan.move_id:
+                self.loan_done(cr, uid, ids, context=context)                
+            if res[loan.id] == 0.0:
+                self.loan_paid(cr, uid, ids, context=context)
         return res
 
     _columns = { 
@@ -86,11 +99,11 @@ class hr_loan(osv.osv):
         'notes' : fields.text('Description', required=True, readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
         'amount' : fields.float('Amount', digits_compute=dp.get_precision('Payroll'), required=True, readonly=True, states={'draft':[('readonly',False)]}), 
         'currency_id': fields.many2one('res.currency', 'Currency', required=True),
-        'nb_payments': fields.integer("Number of payments", required=True, readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
-        'installment' : fields.float('Due amount per payment', digits_compute=dp.get_precision('Payroll'), required=True, readonly=True), 
+        'nb_payments': fields.integer("Number of payments", required=True, readonly=True, states={'draft':[('readonly',False)]}),
+        'installment' : fields.float('Due amount per payment', digits_compute=dp.get_precision('Payroll'), required=True, readonly=True, states={'draft':[('readonly',False)]}), 
         'payment_ids' : fields.one2many('hr.loan.payment', 'loan_id', 'Loan Payments'), 
         'balance': fields.function(_get_balance, type='float', string='Balance', digits_compute=dp.get_precision('Payroll'),  store={
-            _name: (lambda self, cr,uid,ids,c: ids, ['payment_ids'], 10),
+            _name: (lambda self, cr,uid,ids,c: ids, ['payment_ids',"amount"], 10),
             'hr.loan.payment': (_get_loan_from_payment, None,10)
             }),
         
@@ -104,7 +117,7 @@ class hr_loan(osv.osv):
         'company_id': fields.many2one('res.company', 'Company', required=True),
         'state': fields.selection([
                 ('draft', 'New'),
-                ('cancelled', 'Refused'),
+                ('cancelled', 'Cancelled'),
                 ('confirm', 'Waiting Approval'),
                 ('accepted', 'Accepted'),
                 ('done', 'Waiting Payment'),
@@ -130,11 +143,24 @@ class hr_loan(osv.osv):
     def create(self, cr, uid, vals, context=None):
         if 'employee_id' in vals and vals['employee_id']: 
             employee = self.pool.get('hr.employee').browse(cr, uid, [vals['employee_id']])[0] 
+            if not employee.address_home_id : 
+              raise osv.except_osv( 
+                _('Could not create Loan !'), 
+                _("Employee '%s' has no asscociated partner." % employee.name)) 
         if vals.get('name','/') == '/':
             vals['name'] = self.pool.get('ir.sequence').get(cr, uid, 'hr.loan') or '/'
-        vals['balance'] = vals['amount']
         vals['installment'] = vals['amount'] / vals['nb_payments']
         return super(hr_loan, self).create(cr, uid, vals, context=context)
+
+    def copy(self, cr, uid, id, default=None, context=None):
+        default = default or {}
+        default.update({
+            'name': self.pool.get('ir.sequence').get(cr, uid, 'hr.loan') or '/',
+            'balance': False,
+            'payment_ids': [],
+            'move_id': False,
+        })
+        return super(hr_loan, self).copy(cr, uid, id, default, context=context)
 
     def unlink(self, cr, uid, ids, context=None):
         for rec in self.browse(cr, uid, ids, context=context):
@@ -162,7 +188,8 @@ class hr_loan(osv.osv):
     def loan_accept(self, cr, uid, ids, context=None):
         return self.write(cr, uid, ids, {'state': 'accepted', 'date_valid': time.strftime('%Y-%m-%d'), 'user_valid': uid}, context=context)
 
-    def loan_cancelled(self, cr, uid, ids, context=None):
+    def clean_loan(self, cr, uid, ids, context=None):
+        wf_service = netsvc.LocalService("workflow")
         pay_obj = self.pool.get('hr.loan.payment')
         move_obj = self.pool.get('account.move')
         for loan in self.browse(cr, uid, ids, context=context):
@@ -171,6 +198,12 @@ class hr_loan(osv.osv):
             if loan.payment_ids:
                 l = [p.id for p in loan.payment_ids]
                 pay_obj.unlink(cr, uid, l, context=context)
+            if loan.state == "paid":
+                wf_service.trg_delete(uid, 'hr.loan', loan.id, cr)
+                wf_service.trg_create(uid, 'hr.loan', loan.id, cr)
+
+    def loan_cancel(self, cr, uid, ids, context=None):
+        self.clean_loan(cr, uid, ids, context=context)
         return self.write(cr, uid, ids, {'state': 'cancelled'}, context=context)
 
     def loan_suspend(self, cr, uid, ids, context=None):
@@ -179,10 +212,16 @@ class hr_loan(osv.osv):
     def loan_resume(self, cr, uid, ids, context=None):
         return self.write(cr, uid, ids, {'state': 'done'}, context=context)
 
+    def loan_done(self, cr, uid, ids, context=None):
+        return self.write(cr, uid, ids, {'state': 'done'}, context=context)
+
+    def loan_paid(self, cr, uid, ids, context=None):
+        return self.write(cr, uid, ids, {'state': 'paid'}, context=context)
+
     def condition_paid(self, cr, uid, ids, context=None):
         ok = True
         for loan in self.browse(cr, uid, ids, context=context):
-            if loan.amount != sum([payment.amount for payment in loan.payment_ids]):
+            if loan.balance > 0:
                 ok = False
         return ok
             
@@ -250,8 +289,8 @@ class hr_loan(osv.osv):
             if journal_id.entry_posted:
                 move_obj.button_validate(cr, uid, [move_id], context)
             move_obj.write(cr, uid, [move_id], {'line_id': lines}, context=context)
-            self.write(cr, uid, ids, {'move_id': move_id, 'state': 'done'}, context=context)
-        return True
+            self.write(cr, uid, ids, {'move_id': move_id}, context=context)
+        return self.loan_done(cr, uid, ids)
 
     def action_view_receipt(self, cr, uid, ids, context=None):
         '''
