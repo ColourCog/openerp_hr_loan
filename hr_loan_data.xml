@@ -25,7 +25,7 @@
     <!-- Custom Salary rule -->
     <record id="hr_salary_rule_hr_loan" model="hr.salary.rule">
         <field name="condition_select">python</field>
-        <field name="condition_python">result =  bool([ l for l in employee.loan_ids if l.state == "done"])</field>
+        <field name="condition_python">result =  bool([ l for l in employee.loan_ids if l.state == 'waiting'])</field>
         <field name="amount_select">code</field>
         <field name="code">LOAN</field>
         <field name="category_id" ref="hr_loan_category"/>
@@ -34,7 +34,7 @@
         <field name="amount_python_compute">
 l = 0
 for loan in employee.loan_ids:
-    if loan.state == "done":
+    if loan.state == 'waiting':
         if loan.balance > loan.installment:
             l += loan.installment
         else:
@@ -49,7 +49,7 @@ result = - l
         <field name="sequence">156</field>
         <field name="appears_on_payslip" eval="False"/>
         <field name="condition_select">python</field>
-        <field name="condition_python">result =  bool([ l for l in employee.loan_ids if l.state == "done"])</field>
+        <field name="condition_python">result =  bool([ l for l in employee.loan_ids if l.state == 'waiting'])</field>
         <field name="amount_select">code</field>
         <field name="amount_python_compute">result = -categories.LOAN</field>
         <field name="register_id" eval="False"/>

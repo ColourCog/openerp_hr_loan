@@ -16,7 +16,7 @@ class hr_payslip(osv.osv):
         pay_obj = self.pool.get('hr.loan.payment')
         for slip in self.browse(cr, uid, ids, context=context):
             for loan in slip.employee_id.loan_ids:
-                if loan.state == "done":
+                if loan.state == 'waiting':
                     payment = {
                         'loan_id': loan.id,
                         'slip_id': slip.id,

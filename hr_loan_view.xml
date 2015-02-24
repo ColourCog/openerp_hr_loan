@@ -23,18 +23,17 @@
       <field name="arch" type="xml"> 
         <form string="Employee Loans" version="7.0"> 
           <header>
-            <button name="confirm" states="draft" string="Submit to Manager" type="workflow" class="oe_highlight"/>
-            <button name="validate" states="confirm" string="Approve" type="workflow" groups="base.group_hr_manager" class="oe_highlight"/>
-            <button name="loan_suspend" states="done" string="Suspend" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
+            <button name="loan_draft" states="confirm,cancelled" string="Set to Draft" type="object" />
+            <button name="loan_confirm" states="draft" string="Submit to Manager" type="object" class="oe_highlight"/>
+            <button name="loan_validate" states="confirm" string="Approve" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
+            <button name="loan_suspend" states="waiting" string="Suspend" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="loan_resume" states="suspended" string="Resume" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
-            <button name="refuse" states="confirm" string="Refuse" type="workflow" groups="base.group_hr_manager" />
-            <button name="cancel" states="accepted,done" string="Cancel" type="workflow" groups="base.group_hr_manager" />
-            <button name="clean_loan" states="paid" string="Cancel" type="object" groups="base.group_hr_manager" />
-            <button name="draft" states="confirm,cancelled" string="Set to Draft" type="workflow" groups="base.group_hr_user" />
-            <button name="done" states="accepted" string="Generate Accounting Entries" type="workflow" groups="base.group_hr_user" class="oe_highlight"/>
-            <button name="action_view_receipt" states="done,suspended" string="Open Accounting Entries" type="object" groups="base.group_hr_user"/>
+            <button name="loan_cancel" states="confirm" string="Refuse" type="object" groups="base.group_hr_manager" />
+            <button name="loan_cancel" states="accepted,waiting,suspended,paid" string="Cancel" type="object" groups="base.group_hr_manager" />
+            <button name="loan_initiate" states="accepted" string="Generate Accounting Entries" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
+            <button name="action_view_receipt" states="waiting,suspended" string="Open Accounting Entries" type="object" groups="base.group_hr_manager"/>
             <button name="print_slip" states="done,suspended,accepted" icon="gtk-print" string="Print Slip" type="object"/>
-            <field name="state" widget="statusbar" statusbar_visible="draft,confirm,accepted,done,paid" statusbar_colors='{"confirm":"blue","cancelled":"red"}'/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,confirm,accepted,waiting,paid" statusbar_colors='{"confirm":"blue","cancelled":"red"}'/>
           </header>
           <sheet> 
             <h1> <label string="Loan"/> <field name="name" class="oe_inline" readonly="1"/> </h1> 

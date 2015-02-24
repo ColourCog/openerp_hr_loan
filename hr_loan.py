@@ -86,9 +86,9 @@ class hr_loan(osv.osv):
         for loan in self.browse(cr, uid, ids, context=context):
             res[loan.id] = loan.amount - sum([payment.amount for payment in loan.payment_ids])
             if loan.move_id:
-                self.loan_done(cr, uid, ids, context=context)                
+                self.write(cr, uid, ids, {'state': 'waiting'}, context=context)
             if res[loan.id] == 0.0:
-                self.loan_paid(cr, uid, ids, context=context)
+                self.write(cr, uid, ids, {'state': 'paid'}, context=context)
         return res
 
     _columns = { 
@@ -120,7 +120,7 @@ class hr_loan(osv.osv):
                 ('cancelled', 'Cancelled'),
                 ('confirm', 'Waiting Approval'),
                 ('accepted', 'Accepted'),
-                ('done', 'Waiting Payment'),
+                ('waiting', 'Waiting Payment'),
                 ('paid', 'Paid'),
                 ('suspended', 'Suspended'),
                 ],
@@ -146,13 +146,13 @@ class hr_loan(osv.osv):
             if not employee.address_home_id : 
               raise osv.except_osv( 
                 _('Could not create Loan !'), 
-                _("Employee '%s' has no asscociated partner." % employee.name)) 
+                _("Employee '%s' has no associated partner." % employee.name)) 
         if vals.get('name','/') == '/':
             vals['name'] = self.pool.get('ir.sequence').get(cr, uid, 'hr.loan') or '/'
         vals['installment'] = vals['amount'] / vals['nb_payments']
         return super(hr_loan, self).create(cr, uid, vals, context=context)
-
-    def copy(self, cr, uid, id, default=None, context=None):
+    
+    def copy(self, cr, uid, loan_id, default=None, context=None):
         default = default or {}
         default.update({
             'name': self.pool.get('ir.sequence').get(cr, uid, 'hr.loan') or '/',
@@ -160,7 +160,7 @@ class hr_loan(osv.osv):
             'payment_ids': [],
             'move_id': False,
         })
-        return super(hr_loan, self).copy(cr, uid, id, default, context=context)
+        return super(hr_loan, self).copy(cr, uid, loan_id, default, context=context)
 
     def unlink(self, cr, uid, ids, context=None):
         for rec in self.browse(cr, uid, ids, context=context):
@@ -177,7 +177,7 @@ class hr_loan(osv.osv):
               raise osv.except_osv( 
                 _('Could not confirm Loan !'), 
                 _('Amount must be greater than zero.')) 
-            if loan.nb_payments < 0: 
+            if loan.nb_payments < 0:
               raise osv.except_osv( 
                 _('Could not confirm Loan !'), 
                 _('You must set a Number of Payments')) 
@@ -185,7 +185,7 @@ class hr_loan(osv.osv):
                 self.message_subscribe_users(cr, uid, [loan.id], user_ids=[loan.employee_id.parent_id.user_id.id])
         return self.write(cr, uid, ids, {'state': 'confirm', 'date_confirm': time.strftime('%Y-%m-%d')}, context=context)
 
-    def loan_accept(self, cr, uid, ids, context=None):
+    def loan_validate(self, cr, uid, ids, context=None):
         return self.write(cr, uid, ids, {'state': 'accepted', 'date_valid': time.strftime('%Y-%m-%d'), 'user_valid': uid}, context=context)
 
     def clean_loan(self, cr, uid, ids, context=None):
@@ -198,6 +198,7 @@ class hr_loan(osv.osv):
             if loan.payment_ids:
                 l = [p.id for p in loan.payment_ids]
                 pay_obj.unlink(cr, uid, l, context=context)
+                self.write(cr, uid, [loan.id], {'payment_ids': []}, context=context)
             if loan.state == "paid":
                 wf_service.trg_delete(uid, 'hr.loan', loan.id, cr)
                 wf_service.trg_create(uid, 'hr.loan', loan.id, cr)
@@ -210,10 +211,11 @@ class hr_loan(osv.osv):
         return self.write(cr, uid, ids, {'state': 'suspended'}, context=context)
         
     def loan_resume(self, cr, uid, ids, context=None):
-        return self.write(cr, uid, ids, {'state': 'done'}, context=context)
+        return self.write(cr, uid, ids, {'state': 'waiting'}, context=context)
 
-    def loan_done(self, cr, uid, ids, context=None):
-        return self.write(cr, uid, ids, {'state': 'done'}, context=context)
+    def loan_initiate(self, cr, uid, ids, context=None):
+        self.action_receipt_create(cr, uid, ids, context)
+        return self.write(cr, uid, ids, {'state': 'waiting'}, context=context)
 
     def loan_paid(self, cr, uid, ids, context=None):
         return self.write(cr, uid, ids, {'state': 'paid'}, context=context)
@@ -254,6 +256,10 @@ class hr_loan(osv.osv):
         move_obj = self.pool.get('account.move')
         move_line_obj = self.pool.get('account.move.line')
         for loan in self.browse(cr, uid, ids, context=context):
+            if not loan.employee_id.address_home_id:
+                raise osv.except_osv(
+                    _('Linked Partner Missing!'), 
+                    _("Loan accounting requires '%s' to have a valid Home Adress!" % loan.employee_id.name))
             if loan.move_id:
                 continue
             if not loan.account_debit:
@@ -268,7 +274,7 @@ class hr_loan(osv.osv):
             # create the debit move line
             lml.append({
                     'partner_id': loan.employee_id.address_home_id.id,
-                    'name': loan.employee_id.name,
+                    'name': loan.name,
                     'debit': loan.amount, 
                     'account_id': loan.account_debit.id, 
                     'date_maturity': loan.date_confirm, 
@@ -277,7 +283,7 @@ class hr_loan(osv.osv):
             # create the credit move line
             lml.append({
                     'partner_id': loan.employee_id.address_home_id.id,
-                    'name': loan.employee_id.name,
+                    'name': loan.name,
                     'credit': loan.amount, 
                     'account_id': loan.account_credit.id, 
                     'date_maturity': loan.date_confirm, 
@@ -290,7 +296,6 @@ class hr_loan(osv.osv):
                 move_obj.button_validate(cr, uid, [move_id], context)
             move_obj.write(cr, uid, [move_id], {'line_id': lines}, context=context)
             self.write(cr, uid, ids, {'move_id': move_id}, context=context)
-        return self.loan_done(cr, uid, ids)
 
     def action_view_receipt(self, cr, uid, ids, context=None):
         '''
