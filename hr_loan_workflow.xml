@@ -14,8 +14,6 @@
             <field name="wkf_id" ref="wkf_loans"/>
             <field name="name">draft</field>
             <field name="flow_start">True</field>
-            <field name="kind">function</field>
-            <field name="action">loan_draft()</field>
         </record>
 
         <record id="act_confirm" model="workflow.activity">
@@ -32,18 +30,12 @@
             <field name="action">loan_validate()</field>
         </record>
 
-        <record id="act_refused" model="workflow.activity">
-            <field name="wkf_id" ref="wkf_loans"/>
-            <field name="name">refused</field>
-            <field name="kind">function</field>
-            <field name="action">loan_cancel()</field>
-        </record>
 
         <record id="act_waiting" model="workflow.activity">
             <field name="wkf_id" ref="wkf_loans"/>
             <field name="name">waiting</field>
             <field name="kind">function</field>
-            <field name="action">action_receipt_create()</field>
+            <field name="action">loan_initiate()</field>
         </record>
 
          <record id="act_paid" model="workflow.activity">
@@ -53,10 +45,11 @@
             <field name="action">loan_paid()</field>
         </record>
 
-         <record id="act_done" model="workflow.activity">
-            <field name="wkf_id" ref="wkf_loans" />
-            <field name="name">done</field>
-            <field name="kind">dummy</field>
+        <record id="act_cancel" model="workflow.activity">
+            <field name="wkf_id" ref="wkf_loans"/>
+            <field name="name">refused</field>
+            <field name="kind">function</field>
+            <field name="action">loan_cancel()</field>
             <field name="flow_stop">True</field>
         </record>
 
@@ -73,55 +66,42 @@
             <field name="signal">validate</field>
         </record>
 
-        <record id="t4" model="workflow.transition">
+        <record id="t3" model="workflow.transition">
             <field name="act_from" ref="act_confirm"/>
-            <field name="act_to" ref="act_refused"/>
-            <field name="signal">refuse</field>
+            <field name="act_to" ref="act_cancel"/>
+            <field name="signal">cancel</field>
         </record>
 
-        <record id="t5" model="workflow.transition">
+        <record id="t4" model="workflow.transition">
             <field name="act_from" ref="act_accepted"/>
-            <field name="act_to" ref="act_refused"/>
+            <field name="act_to" ref="act_cancel"/>
             <field name="signal">cancel</field>
         </record>
         
-        <record id="t12" model="workflow.transition">
-            <field name="act_from" ref="act_draft"/>
-            <field name="act_to" ref="act_refused"/>
+        <record id="t5" model="workflow.transition">
+            <field name="act_from" ref="act_waiting"/>
+            <field name="act_to" ref="act_cancel"/>
             <field name="signal">cancel</field>
         </record>
 
         <record id="t6" model="workflow.transition">
-            <field name="act_from" ref="act_waiting"/>
-            <field name="act_to" ref="act_refused"/>
-            <field name="signal">cancel</field>
-            <field name="group_id" ref="base.group_hr_user"/>
-        </record>
-
-        <record id="t7" model="workflow.transition">
-            <field name="act_from" ref="act_confirm"/>
-            <field name="act_to" ref="act_draft"/>
-            <field name="signal">draft</field>
-        </record>
-
-        <record id="t8" model="workflow.transition">
             <field name="act_from" ref="act_accepted"/>
             <field name="act_to" ref="act_waiting"/>
             <field name="signal">waiting</field>
         </record>
 
-        <record id="t10" model="workflow.transition">
-            <field name="act_from" ref="act_refused"/>
-            <field name="act_to" ref="act_draft"/>
-            <field name="signal">draft</field>
-        </record>
-
-        <record id="t11" model="workflow.transition">
+        <record id="t7" model="workflow.transition">
             <field name="act_from" ref="act_waiting" />
             <field name="act_to" ref="act_paid" />
             <field name="trigger_model">hr.loan.payment</field>
             <field name="trigger_expr_id">_get_loan_payments()</field>
             <field name="condition">condition_paid()</field>
+        </record>
+
+        <record id="t8" model="workflow.transition">
+            <field name="act_from" ref="act_paid"/>
+            <field name="act_to" ref="act_cancel"/>
+            <field name="signal">cancel</field>
         </record>
 
     </data>

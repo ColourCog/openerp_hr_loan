@@ -24,15 +24,15 @@
         <form string="Employee Loans" version="7.0"> 
           <header>
             <button name="loan_draft" states="confirm,cancelled" string="Set to Draft" type="object" />
-            <button name="loan_confirm" states="draft" string="Submit to Manager" type="object" class="oe_highlight"/>
-            <button name="loan_validate" states="confirm" string="Approve" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
+            <button name="confirm" states="draft" string="Submit to Manager" class="oe_highlight"/>
+            <button name="validate" states="confirm" string="Approve" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="loan_suspend" states="waiting" string="Suspend" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="loan_resume" states="suspended" string="Resume" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
-            <button name="loan_cancel" states="confirm" string="Refuse" type="object" groups="base.group_hr_manager" />
-            <button name="loan_cancel" states="accepted,waiting,suspended,paid" string="Cancel" type="object" groups="base.group_hr_manager" />
-            <button name="loan_initiate" states="accepted" string="Generate Accounting Entries" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
+            <button name="cancel" states="confirm" string="Refuse" groups="base.group_hr_manager" />
+            <button name="cancel" states="accepted,waiting,suspended,paid" string="Cancel" groups="base.group_hr_manager" />
+            <button name="waiting" states="accepted" string="Generate Accounting Entries" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="action_view_receipt" states="waiting,suspended" string="Open Accounting Entries" type="object" groups="base.group_hr_manager"/>
-            <button name="print_slip" states="done,suspended,accepted" icon="gtk-print" string="Print Slip" type="object"/>
+            <button name="print_slip" states="waiting,suspended,accepted" icon="gtk-print" string="Print Slip" type="object"/>
             <field name="state" widget="statusbar" statusbar_visible="draft,confirm,accepted,waiting,paid" statusbar_colors='{"confirm":"blue","cancelled":"red"}'/>
           </header>
           <sheet> 
@@ -41,6 +41,8 @@
               <group>
                 <field name="employee_id" on_change="onchange_employee_id(employee_id)"/>
                 <field name="date"/>
+                <field name="date_confirm"/>
+                <field name="date_valid"/>
                 <field name="company_id" groups="base.group_multi_company"/>
                 <field name="user_valid" attrs="{'invisible': [('state','=','draft')]}" readonly="1"/>
               </group>

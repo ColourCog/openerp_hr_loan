@@ -8,11 +8,9 @@ from openerp import netsvc
 from openerp.osv import fields, osv
 from openerp.tools.translate import _
 import openerp.addons.decimal_precision as dp
+import logging
+_logger = logging.getLogger(__name__)
 
-
-#TODO: 
-# generate journal entries using employee name and loan name as reference
-# debit an asset account (OHADA?) and credit the cash account
 
 def _employee_get(obj, cr, uid, context=None):
     if context is None:
@@ -111,7 +109,7 @@ class hr_loan(osv.osv):
         'account_debit': fields.many2one('account.account', 'Debit Account', readonly=True, states={'accepted':[('readonly',False)]}, help="The account in which the loan will be recorded"),
         'account_credit': fields.many2one('account.account', 'Credit Account', readonly=True, states={'accepted':[('readonly',False)]}, help="The account in which the loan will be paid to the employee"),
         'move_id': fields.many2one('account.move', 'Ledger Posting'),
-        'date_confirm': fields.date('Confirmation Date', select=True, help="Date of the confirmation of the loan. It's filled when the button Submit is pressed."),
+        'date_confirm': fields.date('Request Date', select=True, help="Date of the confirmation of the loan. It's filled when the button Submit is pressed."),
         'date_valid': fields.date('Validation Date', select=True, help="Date of the acceptation of the loan. It's filled when the button Accept is pressed."),
         'user_valid': fields.many2one('res.users', 'Validation By', readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
         'company_id': fields.many2one('res.company', 'Company', required=True),
@@ -169,6 +167,9 @@ class hr_loan(osv.osv):
         return super(hr_loan, self).unlink(cr, uid, ids, context)
 
     def loan_draft(self, cr, uid, ids, context=None):
+        wf_service = netsvc.LocalService("workflow")
+        wf_service.trg_delete(uid, 'hr.loan', loan.id, cr)
+        wf_service.trg_create(uid, 'hr.loan', loan.id, cr)
         return self.write(cr, uid, ids, {'state': 'draft', 'date_valid': None, 'user_valid': None}, context=context)
 
     def loan_confirm(self, cr, uid, ids, context=None):
@@ -183,13 +184,21 @@ class hr_loan(osv.osv):
                 _('You must set a Number of Payments')) 
             if loan.employee_id and loan.employee_id.parent_id.user_id:
                 self.message_subscribe_users(cr, uid, [loan.id], user_ids=[loan.employee_id.parent_id.user_id.id])
-        return self.write(cr, uid, ids, {'state': 'confirm', 'date_confirm': time.strftime('%Y-%m-%d')}, context=context)
+            date = time.strftime('%Y-%m-%d')
+            if loan.date_confirm:
+                date = loan.date_confirm
+            self.write(cr, uid, ids, {'date_confirm': date}, context=context)
+        return self.write(cr, uid, ids, {'state': 'confirm', }, context=context)
 
     def loan_validate(self, cr, uid, ids, context=None):
-        return self.write(cr, uid, ids, {'state': 'accepted', 'date_valid': time.strftime('%Y-%m-%d'), 'user_valid': uid}, context=context)
+        for loan in self.browse(cr, uid, ids):
+            date = time.strftime('%Y-%m-%d')
+            if loan.date_valid:
+                date = loan.date_valid
+            self.write(cr, uid, ids, {'date_valid': date}, context=context)
+        return self.write(cr, uid, ids, {'state': 'accepted', 'user_valid': uid}, context=context)
 
     def clean_loan(self, cr, uid, ids, context=None):
-        wf_service = netsvc.LocalService("workflow")
         pay_obj = self.pool.get('hr.loan.payment')
         move_obj = self.pool.get('account.move')
         for loan in self.browse(cr, uid, ids, context=context):
@@ -199,9 +208,6 @@ class hr_loan(osv.osv):
                 l = [p.id for p in loan.payment_ids]
                 pay_obj.unlink(cr, uid, l, context=context)
                 self.write(cr, uid, [loan.id], {'payment_ids': []}, context=context)
-            if loan.state == "paid":
-                wf_service.trg_delete(uid, 'hr.loan', loan.id, cr)
-                wf_service.trg_create(uid, 'hr.loan', loan.id, cr)
 
     def loan_cancel(self, cr, uid, ids, context=None):
         self.clean_loan(cr, uid, ids, context=context)
@@ -256,6 +262,8 @@ class hr_loan(osv.osv):
         move_obj = self.pool.get('account.move')
         move_line_obj = self.pool.get('account.move.line')
         for loan in self.browse(cr, uid, ids, context=context):
+            if loan.move_id:
+                continue
             if not loan.employee_id.address_home_id:
                 raise osv.except_osv(
                     _('Linked Partner Missing!'), 
@@ -277,7 +285,7 @@ class hr_loan(osv.osv):
                     'name': loan.name,
                     'debit': loan.amount, 
                     'account_id': loan.account_debit.id, 
-                    'date_maturity': loan.date_confirm, 
+                    'date_maturity': loan.date_valid, 
                     })
             
             # create the credit move line
@@ -286,7 +294,7 @@ class hr_loan(osv.osv):
                     'name': loan.name,
                     'credit': loan.amount, 
                     'account_id': loan.account_credit.id, 
-                    'date_maturity': loan.date_confirm, 
+                    'date_maturity': loan.date_valid, 
                     })
             #convert eml into an osv-valid format
             lines = [(0,0,x) for x in lml]
