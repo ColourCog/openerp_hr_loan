@@ -168,8 +168,9 @@ class hr_loan(osv.osv):
 
     def loan_draft(self, cr, uid, ids, context=None):
         wf_service = netsvc.LocalService("workflow")
-        wf_service.trg_delete(uid, 'hr.loan', loan.id, cr)
-        wf_service.trg_create(uid, 'hr.loan', loan.id, cr)
+        for loan in self.browse(cr, uid, ids):
+            wf_service.trg_delete(uid, 'hr.loan', loan.id, cr)
+            wf_service.trg_create(uid, 'hr.loan', loan.id, cr)
         return self.write(cr, uid, ids, {'state': 'draft', 'date_valid': None, 'user_valid': None}, context=context)
 
     def loan_confirm(self, cr, uid, ids, context=None):
