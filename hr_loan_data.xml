@@ -17,11 +17,13 @@
   </data>
   
   <data noupdate="0">
+    
     <record id="hr_loan_category" model="hr.salary.rule.category">
         <field name="parent_id" ref="hr_payroll.DED"/>
         <field name="name">Employee Loans</field>
         <field name="code">LOAN</field>
     </record>
+    
     <!-- Custom Salary rule -->
     <record id="hr_salary_rule_hr_loan" model="hr.salary.rule">
         <field name="condition_select">python</field>
@@ -42,6 +44,7 @@ for loan in employee.loan_ids:
 result = - l
         </field>
      </record>
+     
     <record id="hr_loans_rules_register" model="hr.salary.rule">
         <field name="category_id" ref="hr_payroll.COMP"/>
         <field name="name">Loan Register</field>

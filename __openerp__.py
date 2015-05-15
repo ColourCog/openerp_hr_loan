@@ -9,6 +9,7 @@
     "depends" : [
         "base", 
         "hr", 
+        "hr_contract", 
         "hr_payroll",
         "hr_payroll_account",
         "account",
@@ -30,7 +31,9 @@ in OpenERP.
       'hr_loan_data.xml', 
       'hr_loan_report.xml', 
     ], 
-    "application": False, 
-    "installable": True
+    'demo': ['hr_loan_demo.xml'],
+    'installable': True,
+    'auto_install': False,
+    'application': False,
 }
 

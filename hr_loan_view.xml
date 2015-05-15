@@ -4,7 +4,6 @@
     <record id="view_hr_loan_tree" model="ir.ui.view">
       <field name="name">hr.loan.tree</field> 
       <field name="model">hr.loan</field> 
-      <field name="type">tree</field> 
       <field name="arch" type="xml"> 
         <tree string="Employee Loans" colors="gray:state=='cancelled';green:state=='accepted';blue:state=='confirm';red:state=='suspended'"> 
           <field name="employee_id"/> 
@@ -19,7 +18,6 @@
     <record id="view_hr_loan_form" model="ir.ui.view"> 
       <field name="name">hr.loan.form</field> 
       <field name="model">hr.loan</field> 
-      <field name="type">form</field> 
       <field name="arch" type="xml"> 
         <form string="Employee Loans" version="7.0"> 
           <header>
@@ -90,7 +88,6 @@
     <record id="view_hr_loan_filter" model="ir.ui.view"> 
       <field name="name">hr.loan.filter</field> 
       <field name="model">hr.loan</field> 
-      <field name="type">search</field> 
       <field name="arch" type="xml"> 
         <search string="Search Loans"> 
           <field name="name"/>

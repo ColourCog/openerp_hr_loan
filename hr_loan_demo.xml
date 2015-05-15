@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data noupdate="1">
+
+        <!-- Salary Structure -->
+
+         <record id="sample_structure" model="hr.payroll.structure">
+            <field name="code">LOANS</field>
+            <field name="name">Loan-enabled</field>
+            <field eval="[(6, 0, [ref('hr_salary_rule_hr_loan')])]" name="rule_ids"/>
+            <field name="company_id" ref="base.main_company"/>
+            <field name="parent_id" ref="hr_payroll.structure_001"/>
+        </record>
+
+        <!-- Partner -->
+        <record id="hr_loan_partner" model="res.partner">
+            <field name="name">Loan User</field>
+            <field name="company_id" ref="base.main_company"/>
+            <field name="customer" eval="False"/>
+            <field name="email">loan@example.com</field>
+        </record>
+        
+        <!-- Employee -->
+
+        <record id="hr_employee_loan" model="hr.employee">
+            <field eval="0" name="manager"/>
+            <field eval="1.0" name="time_efficiency"/>
+            <field name="address_home_id" ref="hr_loan_partner"/>
+            <field name="company_id" ref="base.main_company"/>
+            <field eval="1" name="active"/>
+            <field name="name">Bidossessi Sodonon</field>
+            <field name="resource_type">user</field>
+            <field name="work_location">Cotonou</field>
+            <field name="work_phone">+22996896977</field>
+        </record>
+
+        <!-- Employee Contract -->
+
+        <record id="hr_contract_loan" model="hr.contract">
+            <field name="name">Contract for Bidossessi Sodonon</field>
+            <field name="type_id" ref="hr_contract.hr_contract_type_emp"/>
+            <field name="date_start" eval="time.strftime('%Y-%m')+'-1'"/>
+            <field name="date_end" eval="time.strftime('%Y')+'-12-31'"/>
+            <field name="struct_id" ref="sample_structure"/>
+            <field name="employee_id" ref="hr_employee_loan"/>
+            <field name="notes">Loan-Enabled contract</field>
+            <field eval="5000.0" name="wage"/>
+            <field name="working_hours" ref="resource.timesheet_group1"/>
+        </record>
+
+        <!-- Loans -->
+
+        <record id="hr_loan_1" model="hr.loan">
+          <field name="employee_id" ref="hr_employee_loan"/>
+          <field name="amount" eval="2000.0" />
+          <field name="nb_payments">4</field>
+          <field name="notes">I need to pay unexpected car issues.</field>
+        </record>
+        <record id="hr_loan_2" model="hr.loan">
+          <field name="employee_id" ref="hr_employee_loan"/>
+          <field name="amount" eval="1000.0" />
+          <field name="nb_payments">1</field>
+          <field name="notes">My wife just got pregnant. I really need help</field>
+        </record>
+        <record id="hr_loan_3" model="hr.loan">
+          <field name="employee_id" ref="hr_employee_loan"/>
+          <field name="amount" eval="10000.0" />
+          <field name="nb_payments">10</field>
+          <field name="notes">I've been notified of my impending eviction.
+Please find it in your heart to give me this boon.</field>
+        </record>
+
+        <!-- Confirm some Sale Orders-->
+        <workflow action="confirm" model="hr.loan" ref="hr_loan_1"/>
+        <workflow action="confirm" model="hr.loan" ref="hr_loan_2"/>
+        <workflow action="validate" model="hr.loan" ref="hr_loan_2"/>
+        <workflow action="confirm" model="hr.loan" ref="hr_loan_3"/>
+        <workflow action="cancel" model="hr.loan" ref="hr_loan_3"/>
+
+    </data>
+</openerp>
+
