@@ -94,7 +94,7 @@ class hr_loan(osv.osv):
         'date' : fields.date('Date', required=True, select=True, readonly=True, states={'draft':[('readonly',False)], 'accepted':[('readonly',False)]}), 
         'employee_id' : fields.many2one('hr.employee', 'Employee', required=True, readonly=True, states={'draft':[('readonly',False)]}), 
         'user_id': fields.many2one('res.users', 'User', required=True),
-        'notes' : fields.text('Description', required=True, readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
+        'notes' : fields.text('Justification', required=True, readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
         'amount' : fields.float('Amount', digits_compute=dp.get_precision('Payroll'), required=True, readonly=True, states={'draft':[('readonly',False)]}), 
         'currency_id': fields.many2one('res.currency', 'Currency', required=True),
         'nb_payments': fields.integer("Number of payments", required=True, readonly=True, states={'draft':[('readonly',False)]}),
