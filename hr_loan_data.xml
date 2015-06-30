@@ -8,26 +8,28 @@
       <field name="tag">reload</field>
       <field name="params" eval="{'menu_id': ref('hr_menu_hr_loan')}"/>
     </record>
-  
+
     <record id="base.open_menu" model="ir.actions.todo">
       <field name="action_id" ref="action_hr_loan_menu"/>
       <field name="state">open</field>
     </record>
-  
+
   </data>
-  
+
   <data noupdate="0">
-    
+
     <record id="hr_loan_category" model="hr.salary.rule.category">
         <field name="parent_id" ref="hr_payroll.DED"/>
         <field name="name">Employee Loans</field>
         <field name="code">LOAN</field>
     </record>
-    
+
     <!-- Custom Salary rule -->
     <record id="hr_salary_rule_hr_loan" model="hr.salary.rule">
         <field name="condition_select">python</field>
-        <field name="condition_python">result =  bool([ l for l in employee.loan_ids if l.state == 'waiting'])</field>
+        <field name="condition_python">
+result =  bool(
+    [ l for l in employee.loan_ids if l.state == 'waiting' and l.date_valid &lt; payslip.date_from ])</field>
         <field name="amount_select">code</field>
         <field name="code">LOAN</field>
         <field name="category_id" ref="hr_loan_category"/>
@@ -40,11 +42,11 @@ for loan in employee.loan_ids:
         if loan.balance > loan.installment:
             l += loan.installment
         else:
-            l += loan.balance 
+            l += loan.balance
 result = - l
         </field>
      </record>
-     
+
     <record id="hr_loans_rules_register" model="hr.salary.rule">
         <field name="category_id" ref="hr_payroll.COMP"/>
         <field name="name">Loan Register</field>

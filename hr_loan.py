@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# vim: set fileencoding=utf-8 :
-
 import time
 
 from datetime import datetime, date
@@ -15,30 +12,40 @@ _logger = logging.getLogger(__name__)
 def _employee_get(obj, cr, uid, context=None):
     if context is None:
         context = {}
-    ids = obj.pool.get('hr.employee').search(cr, uid, [('user_id', '=', uid)], context=context)
+    ids = obj.pool.get('hr.employee').search(
+            cr,
+            uid,
+            [('user_id', '=', uid)],
+            context=context)
     if ids:
         return ids[0]
     return False
 
+
 class hr_loan_payment(osv.osv):
     _name = 'hr.loan.payment'
-    
+
     _columns = {
         'loan_id': fields.many2one('hr.loan', 'Loan', required=True),
         'slip_id': fields.many2one('hr.payslip', 'Payslip', required=True),
-        'amount' : fields.float('Amount', digits_compute=dp.get_precision('Payroll')), 
+        'amount': fields.float(
+            'Amount',
+            digits_compute=dp.get_precision('Payroll')),
     }
-    _sql_constraints = [
-        ('loan_slip_unique', 'unique (loan_id, slip_id)', 'Payslips must be unique per Loan !'),
+    _sql_constraints = [(
+        'loan_slip_unique',
+        'unique (loan_id, slip_id)',
+        'Payslips must be unique per Loan !'),
     ]
-    
+
 
 hr_loan_payment()
 
+
 class hr_loan(osv.osv):
-    _name = 'hr.loan' 
-    _inherit = ['mail.thread', 'ir.needaction_mixin'] 
-    _description = 'HR Loan Management' 
+    _name = 'hr.loan'
+    _inherit = ['mail.thread', 'ir.needaction_mixin']
+    _description = 'HR Loan Management'
     _track = {
         'state': {
           'hr_loan.mt_loan_accepted': lambda self, cr, uid, obj, ctx=None: obj['state'] == 'accepted',
@@ -46,16 +53,35 @@ class hr_loan(osv.osv):
           'hr_loan.mt_loan_confirmed': lambda self, cr, uid, obj, ctx=None: obj['state'] == 'confirm',
         },
     }
-  
+
+    def _get_journal(self, cr, uid, context=None):
+        if context is None:
+            context = {}
+        user = self.pool.get('res.users').browse(cr, uid, uid, context=context)
+        company_id = context.get('company_id', user.company_id.id)
+        journal_obj = self.pool.get('account.journal')
+        domain = [('code', '=', 'MISC'), ('company_id', '=', company_id)]
+        res = journal_obj.search(cr, uid, domain, limit=1)
+        return res and res[0] or False
+
     def _get_currency(self, cr, uid, context=None):
         res = False
-        cur_obj = self.pool.get('res.currency')
-        currency_ids = cur_obj.search(cr, uid, [("name","=","XOF")], context=context)
-        return currency_ids[0]
-        
+        journal_id = self._get_journal(cr, uid, context=context)
+        if journal_id:
+            journal = self.pool.get('account.journal').browse(
+                    cr,
+                    uid,
+                    journal_id,
+                    context=context)
+            res = journal.company_id.currency_id.id
+            if journal.currency:
+                res = journal.currency.id
+        return res
+
     def _get_loan_from_payment(self, cr, uid, ids, context=None):
         pay_obj = self.pool.get('hr.loan.payment')
-        return [p.loan_id.id for p in pay_obj.browse(cr, uid, ids, context=context)]
+        return [p.loan_id.id
+                for p in pay_obj.browse(cr, uid, ids, context=context)]
 
     def _get_loan_payments(self, cr, uid, ids, context=None):
         res = []
@@ -72,14 +98,15 @@ class hr_loan(osv.osv):
         return {'value': {'company_id': company_id}}
 
     def onchange_amount(self, cr, uid, ids, amount, nb_payments, context=None):
-        val =  amount / nb_payments
+        val = amount / nb_payments
         return {'value': {'installment': val}}
 
     def onchange_nb_payments(self, cr, uid, ids, amount, nb_payments, context=None):
         return self.onchange_amount(cr, uid, ids, amount, nb_payments, context=context)
 
     def _get_balance(self, cr, uid, ids, name, args, context):
-        if not ids: return {}
+        if not ids:
+            return {}
         res = {}
         for loan in self.browse(cr, uid, ids, context=context):
             res[loan.id] = loan.amount - sum([payment.amount for payment in loan.payment_ids])
@@ -89,22 +116,22 @@ class hr_loan(osv.osv):
                 self.write(cr, uid, ids, {'state': 'paid'}, context=context)
         return res
 
-    _columns = { 
-        'name' : fields.char('Name', size=64, select=True, readonly=True), 
-        'date' : fields.date('Date', required=True, select=True, readonly=True, states={'draft':[('readonly',False)], 'accepted':[('readonly',False)]}), 
-        'employee_id' : fields.many2one('hr.employee', 'Employee', required=True, readonly=True, states={'draft':[('readonly',False)]}), 
+    _columns = {
+        'name' : fields.char('Name', size=64, select=True, readonly=True),
+        'date' : fields.date('Date', required=True, select=True, readonly=True, states={'draft':[('readonly',False)], 'accepted':[('readonly',False)]}),
+        'employee_id' : fields.many2one('hr.employee', 'Employee', required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'user_id': fields.many2one('res.users', 'User', required=True),
         'notes' : fields.text('Justification', required=True, readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
-        'amount' : fields.float('Amount', digits_compute=dp.get_precision('Payroll'), required=True, readonly=True, states={'draft':[('readonly',False)]}), 
+        'amount' : fields.float('Amount', digits_compute=dp.get_precision('Payroll'), required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'currency_id': fields.many2one('res.currency', 'Currency', required=True),
         'nb_payments': fields.integer("Number of payments", required=True, readonly=True, states={'draft':[('readonly',False)]}),
-        'installment' : fields.float('Due amount per payment', digits_compute=dp.get_precision('Payroll'), required=True, readonly=True, states={'draft':[('readonly',False)]}), 
-        'payment_ids' : fields.one2many('hr.loan.payment', 'loan_id', 'Loan Payments'), 
+        'installment' : fields.float('Due amount per payment', digits_compute=dp.get_precision('Payroll'), required=True, readonly=True, states={'draft':[('readonly',False)]}),
+        'payment_ids' : fields.one2many('hr.loan.payment', 'loan_id', 'Loan Payments'),
         'balance': fields.function(_get_balance, type='float', string='Balance', digits_compute=dp.get_precision('Payroll'),  store={
             _name: (lambda self, cr,uid,ids,c: ids, ['payment_ids',"amount"], 10),
             'hr.loan.payment': (_get_loan_from_payment, None,10)
             }),
-        
+
         'journal_id': fields.many2one('account.journal', 'Journal', readonly=True, states={'accepted':[('readonly',False)]}, help = "The journal used to record loans."),
         'account_debit': fields.many2one('account.account', 'Debit Account', readonly=True, states={'accepted':[('readonly',False)]}, help="The account in which the loan will be recorded"),
         'account_credit': fields.many2one('account.account', 'Credit Account', readonly=True, states={'accepted':[('readonly',False)]}, help="The account in which the loan will be paid to the employee"),
@@ -139,17 +166,17 @@ class hr_loan(osv.osv):
 
 
     def create(self, cr, uid, vals, context=None):
-        if 'employee_id' in vals and vals['employee_id']: 
-            employee = self.pool.get('hr.employee').browse(cr, uid, [vals['employee_id']])[0] 
-            if not employee.address_home_id : 
-              raise osv.except_osv( 
-                _('Could not create Loan !'), 
-                _("Employee '%s' has no associated partner." % employee.name)) 
+        if 'employee_id' in vals and vals['employee_id']:
+            employee = self.pool.get('hr.employee').browse(cr, uid, [vals['employee_id']])[0]
+            if not employee.address_home_id :
+              raise osv.except_osv(
+                _('Could not create Loan !'),
+                _("Employee '%s' has no associated partner." % employee.name))
         if vals.get('name','/') == '/':
             vals['name'] = self.pool.get('ir.sequence').get(cr, uid, 'hr.loan') or '/'
         vals['installment'] = vals['amount'] / vals['nb_payments']
         return super(hr_loan, self).create(cr, uid, vals, context=context)
-    
+
     def copy(self, cr, uid, loan_id, default=None, context=None):
         default = default or {}
         default.update({
@@ -175,14 +202,14 @@ class hr_loan(osv.osv):
 
     def loan_confirm(self, cr, uid, ids, context=None):
         for loan in self.browse(cr, uid, ids):
-            if loan.amount <= 0.0: 
-              raise osv.except_osv( 
-                _('Could not confirm Loan !'), 
-                _('Amount must be greater than zero.')) 
+            if loan.amount <= 0.0:
+              raise osv.except_osv(
+                _('Could not confirm Loan !'),
+                _('Amount must be greater than zero.'))
             if loan.nb_payments < 0:
-              raise osv.except_osv( 
-                _('Could not confirm Loan !'), 
-                _('You must set a Number of Payments')) 
+              raise osv.except_osv(
+                _('Could not confirm Loan !'),
+                _('You must set a Number of Payments'))
             if loan.employee_id and loan.employee_id.parent_id.user_id:
                 self.message_subscribe_users(cr, uid, [loan.id], user_ids=[loan.employee_id.parent_id.user_id.id])
             date = time.strftime('%Y-%m-%d')
@@ -216,7 +243,7 @@ class hr_loan(osv.osv):
 
     def loan_suspend(self, cr, uid, ids, context=None):
         return self.write(cr, uid, ids, {'state': 'suspended'}, context=context)
-        
+
     def loan_resume(self, cr, uid, ids, context=None):
         return self.write(cr, uid, ids, {'state': 'waiting'}, context=context)
 
@@ -233,8 +260,8 @@ class hr_loan(osv.osv):
             if loan.balance > 0:
                 ok = False
         return ok
-            
-        
+
+
     def account_move_get(self, cr, uid, loan_id, context=None):
         '''
         This method prepare the creation of the account move related to the given loan.
@@ -262,40 +289,42 @@ class hr_loan(osv.osv):
         """Create accounting entries for this loan"""
         move_obj = self.pool.get('account.move')
         move_line_obj = self.pool.get('account.move.line')
+        period_obj = self.pool.get('account.period')
         for loan in self.browse(cr, uid, ids, context=context):
             if loan.move_id:
                 continue
             if not loan.employee_id.address_home_id:
                 raise osv.except_osv(
-                    _('Linked Partner Missing!'), 
+                    _('Linked Partner Missing!'),
                     _("Loan accounting requires '%s' to have a valid Home Adress!" % loan.employee_id.name))
-            if loan.move_id:
-                continue
             if not loan.account_debit:
                 raise osv.except_osv(_('Error!'), _('You must select an account to debit for this loan'))
             if not loan.account_credit:
                 raise osv.except_osv(_('Error!'), _('You must select an account to credit for this loan'))
-            
+
             #create the move that will contain the accounting entries
             move_id = move_obj.create(cr, uid, self.account_move_get(cr, uid, loan.id, context=context), context=context)
-        
+            period_id = period_obj.find(cr, uid, loan.date_valid, context=context)[0]
+
             lml = []
             # create the debit move line
             lml.append({
                     'partner_id': loan.employee_id.address_home_id.id,
                     'name': loan.name,
-                    'debit': loan.amount, 
-                    'account_id': loan.account_debit.id, 
-                    'date_maturity': loan.date_valid, 
+                    'debit': loan.amount,
+                    'account_id': loan.account_debit.id,
+                    'date_maturity': loan.date_valid,
+                    'period_id': period_id,
                     })
-            
+
             # create the credit move line
             lml.append({
                     'partner_id': loan.employee_id.address_home_id.id,
                     'name': loan.name,
-                    'credit': loan.amount, 
-                    'account_id': loan.account_credit.id, 
-                    'date_maturity': loan.date_valid, 
+                    'credit': loan.amount,
+                    'account_id': loan.account_credit.id,
+                    'date_maturity': loan.date_valid,
+                    'period_id': period_id,
                     })
             #convert eml into an osv-valid format
             lines = [(0,0,x) for x in lml]
@@ -332,7 +361,7 @@ class hr_loan(osv.osv):
 
     def print_slip(self, cr, uid, ids, context=None):
         return {
-            'type': 'ir.actions.report.xml', 
+            'type': 'ir.actions.report.xml',
             'report_name': 'hr.loan.slip',
             'datas': {
                     'model':'hr.loan',
