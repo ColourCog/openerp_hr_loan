@@ -28,8 +28,14 @@
     <record id="hr_salary_rule_hr_loan" model="hr.salary.rule">
         <field name="condition_select">python</field>
         <field name="condition_python">
-result =  bool(
-    [ l for l in employee.loan_ids if l.state == 'waiting' and l.date_valid &lt; payslip.date_from ])</field>
+o = False
+for l in employee.loan_ids:
+    if l.date_valid &gt; payslip.date_to:
+        continue
+    if l.state == 'waiting':
+        o = True
+result = o
+        </field>
         <field name="amount_select">code</field>
         <field name="code">LOAN</field>
         <field name="category_id" ref="hr_loan_category"/>
@@ -38,6 +44,8 @@ result =  bool(
         <field name="amount_python_compute">
 l = 0
 for loan in employee.loan_ids:
+    if loan.date_valid &gt; payslip.date_to:
+        continue
     if loan.state == 'waiting':
         if loan.balance > loan.installment:
             l += loan.installment

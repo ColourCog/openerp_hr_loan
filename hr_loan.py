@@ -95,7 +95,7 @@ class hr_loan(osv.osv):
         if employee_id:
             employee = emp_obj.browse(cr, uid, employee_id, context=context)
             company_id = employee.company_id.id
-        return {'value': {'company_id': company_id}}
+            return {'value': {'company_id': company_id}}
 
     def onchange_amount(self, cr, uid, ids, amount, nb_payments, context=None):
         val = amount / nb_payments
@@ -105,6 +105,7 @@ class hr_loan(osv.osv):
         return self.onchange_amount(cr, uid, ids, amount, nb_payments, context=context)
 
     def _get_balance(self, cr, uid, ids, name, args, context):
+        #TODO Make this depend on move_lines instead
         if not ids:
             return {}
         res = {}
