@@ -101,16 +101,24 @@ class hr_loan(osv.osv):
         val = amount / nb_payments
         return {'value': {'installment': val}}
 
-    def onchange_nb_payments(self, cr, uid, ids, amount, nb_payments, context=None):
-        return self.onchange_amount(cr, uid, ids, amount, nb_payments, context=context)
+    def onchange_nb_payments(self, cr, uid, ids, amount, nb_payments,
+                                context=None):
+        return self.onchange_amount(
+                cr,
+                uid,
+                ids,
+                amount,
+                nb_payments,
+                context=context)
 
     def _get_balance(self, cr, uid, ids, name, args, context):
-        #TODO Make this depend on move_lines instead
+        # TODO Make this depend on move_lines instead
         if not ids:
             return {}
         res = {}
         for loan in self.browse(cr, uid, ids, context=context):
-            res[loan.id] = loan.amount - sum([payment.amount for payment in loan.payment_ids])
+            res[loan.id] = loan.amount - sum([
+                payment.amount for payment in loan.payment_ids])
             if loan.move_id:
                 self.write(cr, uid, ids, {'state': 'waiting'}, context=context)
             if res[loan.id] == 0.0:
@@ -292,6 +300,8 @@ class hr_loan(osv.osv):
         move_line_obj = self.pool.get('account.move.line')
         period_obj = self.pool.get('account.period')
         for loan in self.browse(cr, uid, ids, context=context):
+            ctx = context.copy()
+            ctx.update({'account_period_prefer_normal': True})
             if loan.move_id:
                 continue
             if not loan.employee_id.address_home_id:
@@ -304,8 +314,8 @@ class hr_loan(osv.osv):
                 raise osv.except_osv(_('Error!'), _('You must select an account to credit for this loan'))
 
             #create the move that will contain the accounting entries
-            move_id = move_obj.create(cr, uid, self.account_move_get(cr, uid, loan.id, context=context), context=context)
-            period_id = period_obj.find(cr, uid, loan.date_valid, context=context)[0]
+            move_id = move_obj.create(cr, uid, self.account_move_get(cr, uid, loan.id, context=ctx), context=ctx)
+            period_id = period_obj.find(cr, uid, loan.date_valid, context=ctx)[0]
 
             lml = []
             # create the debit move line
@@ -333,8 +343,8 @@ class hr_loan(osv.osv):
             # post the journal entry if 'Skip 'Draft' State for Manual Entries' is checked
             if journal_id.entry_posted:
                 move_obj.button_validate(cr, uid, [move_id], context)
-            move_obj.write(cr, uid, [move_id], {'line_id': lines}, context=context)
-            self.write(cr, uid, ids, {'move_id': move_id}, context=context)
+            move_obj.write(cr, uid, [move_id], {'line_id': lines}, context=ctx)
+            self.write(cr, uid, ids, {'move_id': move_id}, context=ctx)
 
     def action_view_receipt(self, cr, uid, ids, context=None):
         '''
