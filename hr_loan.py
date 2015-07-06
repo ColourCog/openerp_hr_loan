@@ -296,6 +296,8 @@ class hr_loan(osv.osv):
 
     def action_receipt_create(self, cr, uid, ids, context=None):
         """Create accounting entries for this loan"""
+        if context is None:
+            context = {}
         move_obj = self.pool.get('account.move')
         move_line_obj = self.pool.get('account.move.line')
         period_obj = self.pool.get('account.period')
