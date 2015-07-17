@@ -38,8 +38,26 @@ class hr_loan_payment(osv.osv):
         'Payslips must be unique per Loan !'),
     ]
 
-
 hr_loan_payment()
+
+class hr_loan_voucher(osv.osv):
+    _name = 'hr.loan.voucher'
+
+    _columns = {
+        'loan_id': fields.many2one('hr.loan', 'Loan', required=True),
+        'voucher_id': fields.many2one('account.voucher', 'Voucher', required=True),
+        'amount': fields.float(
+            'Amount',
+            digits_compute=dp.get_precision('Payroll')),
+    }
+    _sql_constraints = [(
+        'loan_voucher_unique',
+        'unique (loan_id, voucher_id)',
+        'Vouchers must be unique per Loan !'),
+    ]
+
+hr_loan_voucher()
+
 
 
 class hr_loan(osv.osv):
@@ -89,15 +107,21 @@ class hr_loan(osv.osv):
             res. extend([p.id for p in loan.payment_ids])
         return res
 
-    def onchange_employee_id(self, cr, uid, ids, employee_id, context=None):
+    def onchange_employee_id(self, cr, uid, ids, employee_id, 
+                            context=None):
         emp_obj = self.pool.get('hr.employee')
         company_id = False
         if employee_id:
-            employee = emp_obj.browse(cr, uid, employee_id, context=context)
+            employee = emp_obj.browse(
+                cr, 
+                uid, 
+                employee_id, 
+                context=context)
             company_id = employee.company_id.id
             return {'value': {'company_id': company_id}}
 
-    def onchange_amount(self, cr, uid, ids, amount, nb_payments, context=None):
+    def onchange_amount(self, cr, uid, ids, amount, nb_payments, 
+                        context=None):
         val = amount / nb_payments
         return {'value': {'installment': val}}
 
@@ -135,7 +159,8 @@ class hr_loan(osv.osv):
         'currency_id': fields.many2one('res.currency', 'Currency', required=True),
         'nb_payments': fields.integer("Number of payments", required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'installment' : fields.float('Due amount per payment', digits_compute=dp.get_precision('Payroll'), required=True, readonly=True, states={'draft':[('readonly',False)]}),
-        'payment_ids' : fields.one2many('hr.loan.payment', 'loan_id', 'Loan Payments'),
+        'payment_ids' : fields.one2many('hr.loan.payment', 'loan_id', 'Loan Payslip Payments'),
+        'voucher_ids' : fields.one2many('hr.loan.voucher', 'loan_id', 'Loan Spontaneous Payments'),
         'balance': fields.function(_get_balance, type='float', string='Balance', digits_compute=dp.get_precision('Payroll'),  store={
             _name: (lambda self, cr,uid,ids,c: ids, ['payment_ids',"amount"], 10),
             'hr.loan.payment': (_get_loan_from_payment, None,10)

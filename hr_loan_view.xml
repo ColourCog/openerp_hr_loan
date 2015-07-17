@@ -48,6 +48,7 @@
                 <field name="amount" on_change="onchange_amount(amount, nb_payments)" />
                 <field name="nb_payments" on_change="onchange_nb_payments(amount, nb_payments)" />
                 <field name="installment"/>
+                <field name="move_id" invisible="1"/>
               </group>
             </group>
             <group>
@@ -64,14 +65,17 @@
                     <field name="journal_id" />
                   </group>
                 </page>
-                <page string="Payments">
+                <page string="Payslip Payments">
                   <field name="payment_ids">
-                    <tree string="Payments">
+                    <tree string="Payslip Payments">
                       <field name="loan_id" invisible="1"/>
                       <field name="slip_id" />
                       <field name="amount" sum="Paid yet"/>
                     </tree>
                   </field>
+                </page>
+                <page string="Spontaneous Payments">
+                  <field name="voucher_ids"/>
                 </page>
 
             </notebook>

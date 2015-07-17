@@ -2,3 +2,4 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_hr_loan_user,hr.loan.user,model_hr_loan,base.group_hr_user,1,1,1,1
 access_hr_loan_employee,hr.loan.employee,model_hr_loan,base.group_user,1,1,1,1
 access_hr_loan_payment,access_hr_loan_payment,model_hr_loan_payment,,1,1,1,1
+access_hr_loan_voucher,access_hr_loan_voucher,model_hr_loan_voucher,,1,1,1,1

@@ -25,6 +25,7 @@ in OpenERP.
       "security/hr_loan_security.xml",
       "security/ir.model.access.csv",
       'hr_loan_view.xml', 
+      'res_config_view.xml', 
       'hr_view.xml', 
       'hr_loan_sequence.xml', 
       'hr_loan_workflow.xml', 

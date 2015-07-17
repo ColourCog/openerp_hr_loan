@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+  <data>
+    <record id="view_hr_config_loan" model="ir.ui.view">
+      <field name="name">hr settings for payroll</field>
+      <field name="model">hr.config.settings</field>
+      <field name="inherit_id" ref="hr.view_human_resources_configuration"/>
+      <field name="arch" type="xml">
+        <xpath expr="//group[@name='contract_grp']" position="after">
+          <group name="loans_grp">
+            <label for="id" string="Loans"/>
+            <div>
+              <div>
+                <label for="transfer_account_id"/>
+                <field name="transfer_account_id" class="oe_inline"/>
+              <div>
+              </div>
+                <label for="default_loan_account_id"/>
+                <field name="default_loan_account_id" class="oe_inline"/>
+              <div>
+              </div>
+                <label for="default_loan_journal_id"/>
+                <field name="default_loan_journal_id" class="oe_inline"/>
+              </div>
+            </div>
+          </group>
+        </xpath>
+      </field>
+    </record>
+  </data>
+</openerp>
