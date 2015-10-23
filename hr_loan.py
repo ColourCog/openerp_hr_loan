@@ -397,7 +397,7 @@ class hr_loan(osv.osv):
         for loan in self.browse(cr, uid, ids, context=context):
             name = _('Loan %s to %s') % (loan.name, loan.employee_id.name)
             partner_id = loan.employee_id.address_home_id.id,
-            journal = journal_obj.browse(cr, uid, ctx.get('journal_id'), context=context)
+            journal = journal_obj.browse(cr, uid, ctx.get('paymethod_id'), context=context)
             amt = loan.amount
             voucher = {
                 'journal_id': journal.id,
@@ -514,7 +514,7 @@ class hr_loan_giveout(osv.osv_memory):
     _description = "Give out the Loan"
 
     _columns = {
-        'journal_id': fields.many2one('account.journal', 'Payment method', required=True),
+        'paymethod_id': fields.many2one('account.journal', 'Payment method', required=True),
         'reference': fields.char('Payment reference', size=64, required=True),
     }
 
@@ -526,7 +526,7 @@ class hr_loan_giveout(osv.osv_memory):
         loan_obj = pool_obj.get('hr.loan')
 
         context.update({
-            'journal_id': self.browse(cr,uid,ids)[0].journal_id.id,
+            'paymethod_id': self.browse(cr,uid,ids)[0].paymethod_id.id,
             'reference': self.browse(cr,uid,ids)[0].reference,
             })
 

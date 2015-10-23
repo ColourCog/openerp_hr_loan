@@ -150,7 +150,7 @@
             <form string="Give out Loan" version="7.0">
                 <p>Give out the loan using the following details</p>
                 <group>
-                  <field name="journal_id" domain="[('type', 'in', ['cash','bank'])]"/>
+                  <field name="paymethod_id" domain="[('type', 'in', ['cash','bank'])]"/>
                   <field name="reference" />
                 </group>
                 <footer>
