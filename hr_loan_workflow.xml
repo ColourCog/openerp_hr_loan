@@ -84,12 +84,6 @@
             <field name="signal">cancel</field>
         </record>
 
-        <record id="t6" model="workflow.transition">
-            <field name="act_from" ref="act_accepted"/>
-            <field name="act_to" ref="act_waiting"/>
-            <field name="signal">waiting</field>
-        </record>
-
         <record id="t7" model="workflow.transition">
             <field name="act_from" ref="act_waiting" />
             <field name="act_to" ref="act_paid" />
