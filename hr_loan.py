@@ -2,6 +2,7 @@ import time
 
 from datetime import datetime, date
 from openerp import netsvc
+from openerp import pooler
 from openerp.osv import fields, osv
 from openerp.tools.translate import _
 import openerp.addons.decimal_precision as dp
@@ -168,8 +169,19 @@ class hr_loan(osv.osv):
 
         'journal_id': fields.many2one('account.journal', 'Journal', readonly=True, states={'accepted':[('readonly',False)]}, help = "The journal used to record loans."),
         'account_debit': fields.many2one('account.account', 'Debit Account', readonly=True, states={'accepted':[('readonly',False)]}, help="The account in which the loan will be recorded"),
-        'account_credit': fields.many2one('account.account', 'Credit Account', readonly=True, states={'accepted':[('readonly',False)]}, help="The account in which the loan will be paid to the employee"),
-        'move_id': fields.many2one('account.move', 'Ledger Posting'),
+        'account_credit': fields.many2one(
+            'account.account', 
+            'Transit Account', 
+            readonly=True, 
+            states={'accepted':[('readonly',False)]}, 
+            help="The payable account from which the loan will be paid to the employee"),
+        'move_id': fields.many2one('account.move', 'Journal Entry'),
+        'voucher_id': fields.many2one(
+            'account.voucher', 
+            'Give-out Voucher',
+            readonly=True,
+            states={'accepted':[('readonly',False)]}, 
+            ),
         'date_confirm': fields.date('Request Date', select=True, help="Date of the confirmation of the loan. It's filled when the button Submit is pressed."),
         'date_valid': fields.date('Validation Date', select=True, help="Date of the acceptation of the loan. It's filled when the button Accept is pressed."),
         'user_valid': fields.many2one('res.users', 'Validation By', readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
@@ -227,6 +239,10 @@ class hr_loan(osv.osv):
                 raise osv.except_osv(_('Warning!'),_('You must cancel the Loan before you can delete it.'))
         return super(hr_loan, self).unlink(cr, uid, ids, context)
 
+
+
+
+    ## TOOLS
     def loan_draft(self, cr, uid, ids, context=None):
         wf_service = netsvc.LocalService("workflow")
         for loan in self.browse(cr, uid, ids):
@@ -263,6 +279,7 @@ class hr_loan(osv.osv):
     def clean_loan(self, cr, uid, ids, context=None):
         pay_obj = self.pool.get('hr.loan.payment')
         move_obj = self.pool.get('account.move')
+        voucher_obj = self.pool.get('account.voucher')
         for loan in self.browse(cr, uid, ids, context=context):
             if loan.move_id:
                 move_obj.unlink(cr, uid, [loan.move_id.id], context=context)
@@ -270,6 +287,8 @@ class hr_loan(osv.osv):
                 l = [p.id for p in loan.payment_ids]
                 pay_obj.unlink(cr, uid, l, context=context)
                 self.write(cr, uid, [loan.id], {'payment_ids': []}, context=context)
+            if loan.voucher_id:
+                voucher_obj.unlink(cr, uid, [loan.voucher_id.id], context=context)
 
     def loan_cancel(self, cr, uid, ids, context=None):
         self.clean_loan(cr, uid, ids, context=context)
@@ -283,6 +302,7 @@ class hr_loan(osv.osv):
 
     def loan_initiate(self, cr, uid, ids, context=None):
         self.action_receipt_create(cr, uid, ids, context)
+        self.action_make_voucher(cr, uid, ids, context)
         return self.write(cr, uid, ids, {'state': 'waiting'}, context=context)
 
     def loan_paid(self, cr, uid, ids, context=None):
@@ -331,14 +351,6 @@ class hr_loan(osv.osv):
             ctx.update({'account_period_prefer_normal': True})
             if loan.move_id:
                 continue
-            if not loan.employee_id.address_home_id:
-                raise osv.except_osv(
-                    _('Linked Partner Missing!'),
-                    _("Loan accounting requires '%s' to have a valid Home Adress!" % loan.employee_id.name))
-            if not loan.account_debit:
-                raise osv.except_osv(_('Error!'), _('You must select an account to debit for this loan'))
-            if not loan.account_credit:
-                raise osv.except_osv(_('Error!'), _('You must select an account to credit for this loan'))
 
             #create the move that will contain the accounting entries
             move_id = move_obj.create(cr, uid, self.account_move_get(cr, uid, loan.id, context=ctx), context=ctx)
@@ -369,9 +381,90 @@ class hr_loan(osv.osv):
             journal_id = move_obj.browse(cr, uid, move_id, context).journal_id
             # post the journal entry if 'Skip 'Draft' State for Manual Entries' is checked
             if journal_id.entry_posted:
-                move_obj.button_validate(cr, uid, [move_id], context)
+                move_obj.button_validate(cr, uid, [move_id], ctx)
             move_obj.write(cr, uid, [move_id], {'line_id': lines}, context=ctx)
             self.write(cr, uid, ids, {'move_id': move_id}, context=ctx)
+
+
+
+    def action_make_voucher(self, cr, uid, ids, context=None):
+        ctx = dict(context or {}, account_period_prefer_normal=True)
+        voucher_obj = self.pool.get('account.voucher')
+        journal_obj = self.pool.get('account.journal')
+        move_line_obj = self.pool.get('account.move.line')
+        company_id = self.pool.get('res.users').browse(cr, uid, uid, context=ctx).company_id.id
+
+        for loan in self.browse(cr, uid, ids, context=context):
+            name = _('Loan %s to %s') % (loan.name, loan.employee_id.name)
+            partner_id = loan.employee_id.address_home_id.id,
+            journal = journal_obj.browse(cr, uid, ctx.get('journal_id'), context=context)
+            amt = loan.amount
+            voucher = {
+                'journal_id': journal.id,
+                'company_id': company_id,
+                'partner_id': partner_id,
+                'type':'payment',
+                'name': name,
+                'reference': context.get('reference', _('LOAN %s') % (loan.name)),
+                'account_id': journal.default_credit_account_id.id,
+                'amount': amt > 0.0 and amt or 0.0,
+                'date': loan.date_valid,
+                'date_due': loan.date_valid,
+                'period_id': self.pool.get('account.period').find(
+                    cr, uid, context=ctx)[0],
+                }
+
+            # Define the voucher line
+            lml = []
+            # Create voucher_lines
+            for move_line_id in loan.move_id.line_id:
+                if move_line_id.debit > 0:
+                    continue
+                lml.append({
+                    'name': move_line_id.name,
+                    'move_line_id': move_line_id.id,
+                    'reconcile': True,
+                    'amount': move_line_id.credit > 0 and move_line_id.credit or 0.0,
+                    'account_id': move_line_id.account_id.id,
+                    'type': move_line_id.credit and 'dr' or 'cr',
+                    })
+            lines = [(0,0,x) for x in lml]
+            voucher['line_ids'] = lines
+            voucher_id = voucher_obj.create(cr, uid, voucher, context=ctx)
+            self.write(cr, uid, [loan.id], {'voucher_id': voucher_id}, context=ctx)
+            #~ voucher_obj.button_proforma_voucher(cr, uid, [voucher_id], ctx)
+            #~ move_id = voucher_obj.browse(cr, uid, voucher_id, context=ctx).move_id.id
+            #~ # post the journal entry if 'Skip 'Draft' State for Manual Entries' is checked
+            #~ if journal.entry_posted:
+                #~ move_obj.button_validate(cr, uid, [move_id], ctx)
+            self.write(cr, uid, ids, {'voucher_id': voucher_id}, context=ctx)
+
+
+    def loan_give(self, cr, uid, ids, context=None):
+        for loan in self.browse(cr, uid, ids, context=context):
+            if not loan.employee_id.address_home_id:
+                raise osv.except_osv(
+                    _('Linked Partner Missing!'),
+                    _("Loan accounting requires '%s' to have a valid Home Adress!" % loan.employee_id.name))
+            if not loan.account_debit:
+                raise osv.except_osv(_('Error!'), _('You must select an account to debit for this loan'))
+            if not loan.account_credit:
+                raise osv.except_osv(_('Error!'), _('You must select an account to transit this loan by'))
+
+        dummy, view_id = self.pool.get('ir.model.data').get_object_reference(cr, uid, 'hr_loan', 'hr_loan_give_out_view')
+
+        return {
+            'name':_("Give out Loan"),
+            'view_mode': 'form',
+            'view_id': view_id,
+            'view_type': 'form',
+            'res_model': 'hr.loan.giveout',
+            'type': 'ir.actions.act_window',
+            'nodestroy': True,
+            'target': 'new',
+            'domain': '[]',
+            'context': context
+        }
 
     def action_view_receipt(self, cr, uid, ids, context=None):
         '''
@@ -411,3 +504,34 @@ class hr_loan(osv.osv):
         }
 
 hr_loan()
+
+class hr_loan_giveout(osv.osv_memory):
+    """
+    This wizard create a payment voucher for the loan (give out the money)
+    """
+
+    _name = "hr.loan.giveout"
+    _description = "Give out the Loan"
+
+    _columns = {
+        'journal_id': fields.many2one('account.journal', 'Payment method', required=True),
+        'reference': fields.char('Payment reference', size=64, required=True),
+    }
+
+    def give_out(self, cr, uid, ids, context=None):
+        wf_service = netsvc.LocalService('workflow')
+        if context is None:
+            context = {}
+        pool_obj = pooler.get_pool(cr.dbname)
+        loan_obj = pool_obj.get('hr.loan')
+
+        context.update({
+            'journal_id': self.browse(cr,uid,ids)[0].journal_id.id,
+            'reference': self.browse(cr,uid,ids)[0].reference,
+            })
+
+        loan_obj.loan_initiate(cr, uid, [context.get('active_id')], context=context)
+
+        return {'type': 'ir.actions.act_window_close'}
+
+hr_loan_giveout()

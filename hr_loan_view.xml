@@ -28,7 +28,7 @@
             <button name="loan_resume" states="suspended" string="Resume" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="cancel" states="confirm" string="Refuse" groups="base.group_hr_manager" />
             <button name="cancel" states="accepted,waiting,suspended,paid" string="Cancel" groups="base.group_hr_manager" />
-            <button name="waiting" states="accepted" string="Generate Accounting Entries" groups="base.group_hr_manager" class="oe_highlight"/>
+            <button name="loan_give" states="accepted" string="Give out Loan" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="action_view_receipt" states="waiting,suspended" string="Open Accounting Entries" type="object" groups="base.group_hr_manager"/>
             <button name="print_slip" states="waiting,suspended,accepted" icon="gtk-print" string="Print Slip" type="object"/>
             <field name="state" widget="statusbar" statusbar_visible="draft,confirm,accepted,waiting,paid" statusbar_colors='{"confirm":"blue","cancelled":"red"}'/>
@@ -61,8 +61,9 @@
                 <page string="Accounting" attrs="{'invisible': [('state','=','draft'),('state','=','confirm')]}">
                   <group>
                     <field name="account_debit" />
-                    <field name="account_credit" />
+                    <field name="account_credit" domain="[('type','in',['regular','payable'])]"/>
                     <field name="journal_id" />
+                    <field name="voucher_id" />
                   </group>
                 </page>
                 <page string="Payslip Payments">
@@ -139,6 +140,27 @@
 
     <menuitem action="action_hr_loan_form" id="hr_menu_hr_loan" parent="hr.menu_hr_main" sequence="90" />
 
+
+
+
+    <record id="hr_loan_give_out_view" model="ir.ui.view">
+        <field name="name">hr.loan.giveout.form</field>
+        <field name="model">hr.loan.giveout</field>
+        <field name="arch" type="xml">
+            <form string="Give out Loan" version="7.0">
+                <p>Give out the loan using the following details</p>
+                <group>
+                  <field name="journal_id" domain="[('type', 'in', ['cash','bank'])]"/>
+                  <field name="reference" />
+                </group>
+                <footer>
+                    <button string="Pay" name="give_out" type="object" default_focus="1" class="oe_highlight"/>
+                    or
+                    <button string="Cancel" class="oe_link" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
 
   </data>
 </openerp>
