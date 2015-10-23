@@ -2,6 +2,7 @@ import time
 
 from datetime import datetime, date
 from openerp import netsvc
+from openerp import pooler
 from openerp.osv import fields, osv
 from openerp.tools.translate import _
 import openerp.addons.decimal_precision as dp
@@ -150,7 +151,12 @@ class hr_loan(osv.osv):
             states={'accepted':[('readonly',False)]}, 
             help="The payable account from which the loan will be paid to the employee"),
         'move_id': fields.many2one('account.move', 'Journal Entry'),
-        'voucher_id': fields.many2one('account.voucher', 'Give-out Voucher'),
+        'voucher_id': fields.many2one(
+            'account.voucher', 
+            'Give-out Voucher',
+            readonly=True,
+            states={'accepted':[('readonly',False)]}, 
+            ),
         'date_confirm': fields.date('Request Date', select=True, help="Date of the confirmation of the loan. It's filled when the button Submit is pressed."),
         'date_valid': fields.date('Validation Date', select=True, help="Date of the acceptation of the loan. It's filled when the button Accept is pressed."),
         'user_valid': fields.many2one('res.users', 'Validation By', readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
@@ -320,14 +326,6 @@ class hr_loan(osv.osv):
             ctx.update({'account_period_prefer_normal': True})
             if loan.move_id:
                 continue
-            if not loan.employee_id.address_home_id:
-                raise osv.except_osv(
-                    _('Linked Partner Missing!'),
-                    _("Loan accounting requires '%s' to have a valid Home Adress!" % loan.employee_id.name))
-            if not loan.account_debit:
-                raise osv.except_osv(_('Error!'), _('You must select an account to debit for this loan'))
-            if not loan.account_credit:
-                raise osv.except_osv(_('Error!'), _('You must select an account to transit this loan by'))
 
             #create the move that will contain the accounting entries
             move_id = move_obj.create(cr, uid, self.account_move_get(cr, uid, loan.id, context=ctx), context=ctx)
@@ -358,7 +356,7 @@ class hr_loan(osv.osv):
             journal_id = move_obj.browse(cr, uid, move_id, context).journal_id
             # post the journal entry if 'Skip 'Draft' State for Manual Entries' is checked
             if journal_id.entry_posted:
-                move_obj.button_validate(cr, uid, [move_id], context)
+                move_obj.button_validate(cr, uid, [move_id], ctx)
             move_obj.write(cr, uid, [move_id], {'line_id': lines}, context=ctx)
             self.write(cr, uid, ids, {'move_id': move_id}, context=ctx)
 
@@ -369,7 +367,7 @@ class hr_loan(osv.osv):
         voucher_obj = self.pool.get('account.voucher')
         journal_obj = self.pool.get('account.journal')
         move_line_obj = self.pool.get('account.move.line')
-        company_id = self.pool.get('res.users').browse(cr, uid, context=ctx).company_id.id
+        company_id = self.pool.get('res.users').browse(cr, uid, uid, context=ctx).company_id.id
 
         for loan in self.browse(cr, uid, ids, context=context):
             name = _('Loan %s to %s') % (loan.name, loan.employee_id.name)
@@ -401,7 +399,7 @@ class hr_loan(osv.osv):
                     'name': move_line_id.name,
                     'move_line_id': move_line_id.id,
                     'reconcile': True,
-                    'amount': move_line_id.credit > 0 and move_line_id.credit or move_line_id.debit,
+                    'amount': move_line_id.credit > 0 and move_line_id.credit or 0.0,
                     'account_id': move_line_id.account_id.id,
                     'type': move_line_id.credit and 'dr' or 'cr',
                     })
@@ -409,14 +407,25 @@ class hr_loan(osv.osv):
             voucher['line_ids'] = lines
             voucher_id = voucher_obj.create(cr, uid, voucher, context=ctx)
             self.write(cr, uid, [loan.id], {'voucher_id': voucher_id}, context=ctx)
-            voucher_obj.button_proforma_voucher(cr, uid, [voucher_id], ctx)
-            move_id = voucher_obj.browse(cr, uid, voucher_id, context=ctx).move_id.id
-            # post the journal entry if 'Skip 'Draft' State for Manual Entries' is checked
-            if journal.entry_posted:
-                move_obj.button_validate(cr, uid, [move_id], ctx)
+            #~ voucher_obj.button_proforma_voucher(cr, uid, [voucher_id], ctx)
+            #~ move_id = voucher_obj.browse(cr, uid, voucher_id, context=ctx).move_id.id
+            #~ # post the journal entry if 'Skip 'Draft' State for Manual Entries' is checked
+            #~ if journal.entry_posted:
+                #~ move_obj.button_validate(cr, uid, [move_id], ctx)
+            self.write(cr, uid, ids, {'voucher_id': voucher_id}, context=ctx)
 
 
     def loan_give(self, cr, uid, ids, context=None):
+        for loan in self.browse(cr, uid, ids, context=context):
+            if not loan.employee_id.address_home_id:
+                raise osv.except_osv(
+                    _('Linked Partner Missing!'),
+                    _("Loan accounting requires '%s' to have a valid Home Adress!" % loan.employee_id.name))
+            if not loan.account_debit:
+                raise osv.except_osv(_('Error!'), _('You must select an account to debit for this loan'))
+            if not loan.account_credit:
+                raise osv.except_osv(_('Error!'), _('You must select an account to transit this loan by'))
+
         dummy, view_id = self.pool.get('ir.model.data').get_object_reference(cr, uid, 'hr_loan', 'hr_loan_give_out_view')
 
         return {
@@ -480,7 +489,7 @@ class hr_loan_giveout(osv.osv_memory):
     _description = "Give out the Loan"
 
     _columns = {
-        'journal_id': fields.many2one('account.journal', 'Payment method', reauired=True),
+        'journal_id': fields.many2one('account.journal', 'Payment method', required=True),
         'reference': fields.char('Payment reference', size=64, required=True),
     }
 
@@ -492,6 +501,7 @@ class hr_loan_giveout(osv.osv_memory):
         loan_obj = pool_obj.get('hr.loan')
 
         context.update({
+            'journal_id': self.browse(cr,uid,ids)[0].journal_id.id,
             'reference': self.browse(cr,uid,ids)[0].reference,
             })
 
