@@ -153,6 +153,7 @@ class hr_loan(osv.osv):
     _columns = {
         'name' : fields.char('Name', size=64, select=True, readonly=True),
         'date' : fields.date('Date', required=True, select=True, readonly=True, states={'draft':[('readonly',False)], 'accepted':[('readonly',False)]}),
+        'is_advance': fields.boolean('Advance', readonly=True, states={'draft': [('readonly', False)]}, help="If its checked, indicates that loan is actually an advance."),
         'employee_id' : fields.many2one('hr.employee', 'Employee', required=True, readonly=True, states={'draft':[('readonly',False)]}),
         'user_id': fields.many2one('res.users', 'User', required=True),
         'notes' : fields.text('Justification', required=True, readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
@@ -179,9 +180,7 @@ class hr_loan(osv.osv):
         'voucher_id': fields.many2one(
             'account.voucher', 
             'Give-out Voucher',
-            readonly=True,
-            states={'accepted':[('readonly',False)]}, 
-            ),
+            readonly=True),
         'date_confirm': fields.date('Request Date', select=True, help="Date of the confirmation of the loan. It's filled when the button Submit is pressed."),
         'date_valid': fields.date('Validation Date', select=True, help="Date of the acceptation of the loan. It's filled when the button Accept is pressed."),
         'user_valid': fields.many2one('res.users', 'Validation By', readonly=True, states={'draft':[('readonly',False)], 'confirm':[('readonly',False)]}),
@@ -204,7 +203,8 @@ class hr_loan(osv.osv):
         'company_id': lambda s, cr, uid, c: s.pool.get('res.company')._company_default_get(cr, uid, 'hr.employee', context=c),
         'date': fields.date.context_today,
         'currency_id': _get_currency,
-        'nb_payments': 3,
+        'nb_payments': 1,
+        'is_advance': False,
         'state': 'draft',
         'employee_id': _employee_get,
         'user_id': lambda cr, uid, id, c={}: id,
@@ -252,14 +252,19 @@ class hr_loan(osv.osv):
 
     def loan_confirm(self, cr, uid, ids, context=None):
         for loan in self.browse(cr, uid, ids):
+            if loan.is_advance:
+                if loan.nb_payments > 1:
+                    raise osv.except_osv(
+                        _('Could not confirm Loan !'),
+                        _('Not more than one installment for an advance.'))
             if loan.amount <= 0.0:
-              raise osv.except_osv(
-                _('Could not confirm Loan !'),
-                _('Amount must be greater than zero.'))
+                raise osv.except_osv(
+                    _('Could not confirm Loan !'),
+                    _('Amount must be greater than zero.'))
             if loan.nb_payments < 0:
-              raise osv.except_osv(
-                _('Could not confirm Loan !'),
-                _('You must set a Number of Payments'))
+                raise osv.except_osv(
+                    _('Could not confirm Loan !'),
+                    _('You must set a Number of Payments'))
             if loan.employee_id and loan.employee_id.parent_id.user_id:
                 self.message_subscribe_users(cr, uid, [loan.id], user_ids=[loan.employee_id.parent_id.user_id.id])
             date = time.strftime('%Y-%m-%d')

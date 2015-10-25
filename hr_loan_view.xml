@@ -45,6 +45,7 @@
                 <field name="user_valid" attrs="{'invisible': [('state','=','draft')]}" readonly="1"/>
               </group>
               <group>
+                <field name="is_advance"/>
                 <field name="amount" on_change="onchange_amount(amount, nb_payments)" />
                 <field name="nb_payments" on_change="onchange_nb_payments(amount, nb_payments)" />
                 <field name="installment"/>
@@ -60,8 +61,8 @@
                 </page>
                 <page string="Accounting" attrs="{'invisible': [('state','=','draft'),('state','=','confirm')]}">
                   <group>
-                    <field name="account_debit" />
-                    <field name="account_credit" domain="[('type','in',['regular','payable'])]"/>
+                    <field name="account_debit" domain="[('type','not in',['consolidation','view'])]"/>
+                    <field name="account_credit" domain="[('type','in',['other','payable'])]"/>
                     <field name="journal_id" />
                     <field name="voucher_id" />
                   </group>

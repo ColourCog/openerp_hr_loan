@@ -23,16 +23,23 @@
         <field name="name">Employee Loans</field>
         <field name="code">LOAN</field>
     </record>
+    <record id="hr_loan_category_advance" model="hr.salary.rule.category">
+        <field name="parent_id" ref="hr_payroll.DED"/>
+        <field name="name">Employee Advances</field>
+        <field name="code">ADVC</field>
+    </record>
 
     <!-- Custom Salary rule -->
     <record id="hr_salary_rule_hr_loan" model="hr.salary.rule">
         <field name="condition_select">python</field>
         <field name="condition_python">
 o = False
-for l in employee.loan_ids:
-    if l.date_valid &gt; payslip.date_to:
+for loan in employee.loan_ids:
+    if loan.is_advance:
         continue
-    if l.state == 'waiting':
+    if loan.date_valid &gt; payslip.date_to:
+        continue
+    if loan.state == 'waiting':
         o = True
 result = o
         </field>
@@ -44,6 +51,42 @@ result = o
         <field name="amount_python_compute">
 l = 0
 for loan in employee.loan_ids:
+    if loan.is_advance:
+        continue
+    if loan.date_valid &gt; payslip.date_to:
+        continue
+    if loan.state == 'waiting':
+        if loan.balance > loan.installment:
+            l += loan.installment
+        else:
+            l += loan.balance
+result = - l
+        </field>
+     </record>
+
+    <record id="hr_salary_rule_hr_advance" model="hr.salary.rule">
+        <field name="condition_select">python</field>
+        <field name="condition_python">
+o = False
+for loan in employee.loan_ids:
+    if loan.is_advance == False:
+        continue
+    if loan.date_valid &gt; payslip.date_to:
+        continue
+    if loan.state == 'waiting':
+        o = True
+result = o
+        </field>
+        <field name="amount_select">code</field>
+        <field name="code">ADVC</field>
+        <field name="category_id" ref="hr_loan_category_advance"/>
+        <field name="name">Advance Payment</field>
+        <field name="sequence" eval="156"/>
+        <field name="amount_python_compute">
+l = 0
+for loan in employee.loan_ids:
+    if loan.is_advance == False:
+        continue
     if loan.date_valid &gt; payslip.date_to:
         continue
     if loan.state == 'waiting':
@@ -59,12 +102,25 @@ result = - l
         <field name="category_id" ref="hr_payroll.COMP"/>
         <field name="name">Loan Register</field>
         <field name="code">LOANREG</field>
-        <field name="sequence">156</field>
+        <field name="sequence">157</field>
         <field name="appears_on_payslip" eval="False"/>
         <field name="condition_select">python</field>
-        <field name="condition_python">result =  bool([ l for l in employee.loan_ids if l.state == 'waiting'])</field>
+        <field name="condition_python">result =  bool([ l for l in employee.loan_ids if l.state == 'waiting' and not l.is_advance ])</field>
         <field name="amount_select">code</field>
         <field name="amount_python_compute">result = -categories.LOAN</field>
+        <field name="register_id" eval="False"/>
+    </record>
+
+    <record id="hr_loans_rules_register_advance" model="hr.salary.rule">
+        <field name="category_id" ref="hr_payroll.COMP"/>
+        <field name="name">Advance Register</field>
+        <field name="code">ADVCREG</field>
+        <field name="sequence">158</field>
+        <field name="appears_on_payslip" eval="False"/>
+        <field name="condition_select">python</field>
+        <field name="condition_python">result =  bool([ l for l in employee.loan_ids if l.state == 'waiting' and l.is_advance ])</field>
+        <field name="amount_select">code</field>
+        <field name="amount_python_compute">result = -categories.ADVC</field>
         <field name="register_id" eval="False"/>
     </record>
 
