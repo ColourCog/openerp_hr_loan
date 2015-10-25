@@ -29,7 +29,6 @@
             <button name="cancel" states="confirm" string="Refuse" groups="base.group_hr_manager" />
             <button name="cancel" states="accepted,waiting,suspended,paid" string="Cancel" groups="base.group_hr_manager" />
             <button name="loan_give" states="accepted" string="Give out Loan" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
-            <button name="action_view_receipt" states="waiting,suspended" string="Open Accounting Entries" type="object" groups="base.group_hr_manager"/>
             <button name="print_slip" states="waiting,suspended,accepted" icon="gtk-print" string="Print Slip" type="object"/>
             <field name="state" widget="statusbar" statusbar_visible="draft,confirm,accepted,waiting,paid" statusbar_colors='{"confirm":"blue","cancelled":"red"}'/>
           </header>
@@ -61,10 +60,15 @@
                 </page>
                 <page string="Accounting" attrs="{'invisible': [('state','=','draft'),('state','=','confirm')]}">
                   <group>
-                    <field name="account_debit" domain="[('type','not in',['consolidation','view'])]"/>
-                    <field name="account_credit" domain="[('type','in',['other','payable'])]"/>
-                    <field name="journal_id" />
-                    <field name="voucher_id" />
+                    <group>
+                      <field name="account_debit" domain="[('type','not in',['consolidation','view'])]"/>
+                      <field name="account_credit" domain="[('type','in',['other','payable'])]"/>
+                      <field name="journal_id" />
+                    </group>
+                    <group>
+                      <field name="move_id" />
+                      <field name="voucher_id" />
+                    </group>
                   </group>
                 </page>
                 <page string="Payslip Payments">
