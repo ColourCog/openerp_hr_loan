@@ -175,6 +175,7 @@
             <form string="Give out Loan" version="7.0">
                 <p>Spontaenous Loan Repayment</p>
                 <group>
+                  <field name="date" />
                   <field name="paymethod_id" domain="[('type', 'in', ['cash','bank'])]"/>
                   <field name="amount" />
                   <field name="reference" />

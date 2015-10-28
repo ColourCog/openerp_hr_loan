@@ -621,14 +621,18 @@ class hr_loan(osv.osv):
             self.write(cr, uid, [loan.id], {'voucher_id': voucher_id}, context=ctx)
 
 
-    def action_spontaneous_voucher(self, cr, uid, loan_id, date, amount, context=None):
+    def action_spontaneous_voucher(self, cr, uid, loan_id, context=None):
         """Create voucher for spontaneous payment"""
         ctx = dict(context or {}, account_period_prefer_normal=True)
+        voucher_obj = self.pool.get('account.voucher')
+        journal_obj = self.pool.get('account.journal')
         journal = journal_obj.browse(cr, uid, ctx.get('paymethod_id'), context=context)
-        loan = self.browse(cr, uid, loan_id, context=ctx)
+        loan = self.browse(cr, uid, loan_id, context=ctx)[0]
         name = _('Payment on Loan %s from %s') % (loan.name, loan.employee_id.name)
+        amount = ctx.get('amount')
+        date = ctx.get('date')
 
-        if not amount > loan.balance:
+        if amount > loan.balance:
             raise osv.except_osv(
                 _('Amount error'),
                 _("Spontaneous payment cannot exceed Loan balance"))
@@ -657,8 +661,7 @@ class hr_loan(osv.osv):
             amount, 
             context=ctx)
 
-        self.write(cr, uid, [loan.id], {'voucher_ids': (4, voucher_id)}, context=ctx)
-        voucher_obj.write(cr, uid, [voucher_id], {'loan_id': loan_id}, context=ctx)
+        self.write(cr, uid, [loan.id], {'voucher_ids': [(4, voucher_id)]}, context=ctx)
         
     def loan_give(self, cr, uid, ids, context=None):
         for loan in self.browse(cr, uid, ids, context=context):
@@ -736,7 +739,11 @@ class hr_loan_giveout(osv.osv_memory):
 
     _columns = {
         'paymethod_id': fields.many2one('account.journal', 'Payment method', required=True),
-        'reference': fields.char('Payment reference', size=64, required=True),
+        'reference': fields.char(
+            'Payment reference', 
+            size=64, 
+            required=True,
+            help="Check number, or short memo"),
     }
 
     def give_out(self, cr, uid, ids, context=None):
@@ -777,6 +784,10 @@ class hr_loan_spontaneous(osv.osv_memory):
         'reference': fields.char(
             'Payment reference', 
             size=64, 
+            help="Check number, or short memo"),
+        'date': fields.date(
+            'Payment Date',
+            select=True,
             required=True),
     }
 
@@ -788,6 +799,8 @@ class hr_loan_spontaneous(osv.osv_memory):
         loan_obj = pool_obj.get('hr.loan')
 
         context.update({
+            'date': self.browse(cr, uid, ids)[0].date,
+            'amount': self.browse(cr, uid, ids)[0].amount,
             'paymethod_id': self.browse(cr, uid, ids)[0].paymethod_id.id,
             'reference': self.browse(cr, uid, ids)[0].reference,
             })
