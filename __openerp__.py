@@ -1,6 +1,6 @@
 {
     "name" : "Loan Management",
-    "version" : "3.0", 
+    "version" : "3.3", 
     "category" : "Human Resources", 
     "sequence": 40,
     "complexity" : "normal", 
