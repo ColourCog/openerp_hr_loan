@@ -28,6 +28,8 @@ class human_resources_configuration(osv.osv_memory):
             'Set the transfer account to use when creating loans'),
         'default_loan_account_id': fields.many2one('account.account', 
             'The loan account to use by default'),
+        'default_advance_account_id': fields.many2one('account.account', 
+            'The advance account to use by default'),
         'default_loan_journal_id': fields.many2one('account.journal', 
             'The journal to use by default'),
     }
