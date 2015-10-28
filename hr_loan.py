@@ -23,6 +23,16 @@ def _employee_get(obj, cr, uid, context=None):
     return False
 
 
+class account_voucher(osv.osv):
+    _inherit='account.voucher'
+    _name='account.voucher'
+
+    _columns = {
+        'loan_id': fields.many2one('hr.loan', 'Loan'),
+    }
+
+account_voucher()
+
 class hr_loan_payment(osv.osv):
     _name = 'hr.loan.payment'
 
@@ -41,26 +51,6 @@ class hr_loan_payment(osv.osv):
 
 hr_loan_payment()
 
-
-class hr_loan_voucher(osv.osv):
-    _name = 'hr.loan.voucher'
-
-    _columns = {
-        'loan_id': fields.many2one('hr.loan', 'Loan', required=True),
-        'voucher_id': fields.many2one(
-            'account.voucher',
-            'Voucher', required=True),
-        'amount': fields.float(
-            'Amount',
-            digits_compute=dp.get_precision('Payroll')),
-    }
-    _sql_constraints = [(
-        'loan_voucher_unique',
-        'unique (loan_id, voucher_id)',
-        'Vouchers must be unique per Loan !'),
-    ]
-
-hr_loan_voucher()
 
 
 class hr_loan(osv.osv):
@@ -103,6 +93,11 @@ class hr_loan(osv.osv):
         pay_obj = self.pool.get('hr.loan.payment')
         return [p.loan_id.id
                 for p in pay_obj.browse(cr, uid, ids, context=context)]
+    
+    def _get_loan_from_voucher(self, cr, uid, ids, context=None):
+        voucher_obj = self.pool.get('account.voucher')
+        return [p.loan_id.id
+                for p in voucher_obj.browse(cr, uid, ids, context=context)]
 
     def _get_loan_payments(self, cr, uid, ids, context=None):
         res = []
@@ -139,16 +134,16 @@ class hr_loan(osv.osv):
                 context=context)
 
     def _get_balance(self, cr, uid, ids, name, args, context):
-        # TODO Make this depend on move_lines instead
         if not ids:
             return {}
         res = {}
         for loan in self.browse(cr, uid, ids, context=context):
-            res[loan.id] = loan.amount - sum([
-                payment.amount for payment in loan.payment_ids])
+            payslip = sum([ p.amount for p in loan.payment_ids])
+            vouchers = sum([ v.amount for v in loan.voucher_ids])
+            res[loan.id] = loan.amount - (payslip + vouchers)
             if loan.move_id:
                 self.write(cr, uid, ids, {'state': 'waiting'}, context=context)
-            if res[loan.id] == 0.0:
+            if res[loan.id] <= 0.0:
                 self.write(cr, uid, ids, {'state': 'paid'}, context=context)
         return res
 
@@ -208,7 +203,7 @@ class hr_loan(osv.osv):
             'loan_id',
             'Loan Payslip Payments'),
         'voucher_ids': fields.one2many(
-            'hr.loan.voucher',
+            'account.voucher',
             'loan_id',
             'Loan Spontaneous Payments'),
         'balance': fields.function(
@@ -217,8 +212,9 @@ class hr_loan(osv.osv):
             string='Balance',
             digits_compute=dp.get_precision('Payroll'),
             store={
-                _name: (lambda self, cr, uid, ids, c: ids, ['payment_ids', 'amount'], 10),
-                'hr.loan.payment': (_get_loan_from_payment, None, 10)
+                _name: (lambda self, cr, uid, ids, c: ids, ['payment_ids', 'voucher_ids', 'amount'], 10),
+                'hr.loan.payment': (_get_loan_from_payment, None, 10),
+                'account.voucher': (_get_loan_from_voucher, None, 10),
             }),
 
         'journal_id': fields.many2one(
@@ -239,7 +235,10 @@ class hr_loan(osv.osv):
             readonly=True,
             states={'accepted': [('readonly', False)]},
             help="The account from which the loan will be paid to the employee"),
-        'move_id': fields.many2one('account.move', 'Journal Entry'),
+        'move_id': fields.many2one(
+            'account.move', 
+            'Journal Entry',
+            readonly=True),
         'voucher_id': fields.many2one(
             'account.voucher',
             'Give-out Voucher',
@@ -457,103 +456,210 @@ class hr_loan(osv.osv):
             journal_id = journal_id[0]
         return self.pool.get('account.move').account_move_prepare(cr, uid, journal_id, date=date, ref=ref, company_id=company_id, context=context)
 
+
+
+    def _create_move(self, cr, uid, loan_id, reference, credit_id, 
+                    debit_id, date, amount, context=None):
+        """return a move, given the variables."""
+        ctx = dict(context or {}, account_period_prefer_normal=True)
+        move_obj = self.pool.get('account.move')
+        period_obj = self.pool.get('account.period')
+        loan = self.browse(cr, uid, loan_id, context=ctx)
+        company_id = loan.company_id.id
+        period_id = period_obj.find(cr, uid, date, context=ctx)[0]
+
+        move_id =  move_obj.create(
+            cr, 
+            uid, 
+            self.pool.get('account.move').account_move_prepare(
+                cr, 
+                uid, 
+                loan.journal_id.id, 
+                date=date, 
+                ref=reference, 
+                company_id=company_id, 
+                context=ctx),
+            context=ctx)
+            
+
+        lml = []
+        # create the debit move line
+        lml.append({
+                'partner_id': loan.employee_id.address_home_id.id,
+                'name': loan.name,
+                'debit': amount,
+                'account_id': debit_id,
+                'date_maturity': date,
+                'period_id': period_id,
+                })
+
+        # create the credit move line
+        lml.append({
+                'partner_id': loan.employee_id.address_home_id.id,
+                'name': loan.name,
+                'credit': amount,
+                'account_id': credit_id,
+                'date_maturity': date,
+                'period_id': period_id,
+                })
+        # convert eml into an osv-valid format
+        lines = [(0, 0, x) for x in lml]
+        move_obj.write(cr, uid, [move_id], {'line_id': lines}, context=ctx)
+        # post the journal entry if 'Skip 'Draft' State for Manual Entries' is checked
+        if loan.journal_id.entry_posted:
+            move_obj.button_validate(cr, uid, [move_id], ctx)
+        return move_id
+
+    def _create_voucher(self, cr, uid, loan_id, move_id, journal_id, 
+                        name, vtype, reference, date, amount, 
+                        context=None):
+        ctx = dict(context or {}, account_period_prefer_normal=True)
+        CRDIR = {'in': 'cr', 'out':'dr'}
+        TRDIR = {'in': 'receipt', 'out':'payment'}
+        period_obj = self.pool.get('account.period')
+        voucher_obj = self.pool.get('account.voucher')
+        journal_obj = self.pool.get('account.journal')
+        move_obj = self.pool.get('account.move')
+        move = move_obj.browse(cr, uid, move_id, context=ctx)
+        loan = self.browse(cr, uid, loan_id, context=ctx)
+        journal = journal_obj.browse(cr, uid, journal_id, context=ctx)
+        company_id = loan.company_id.id
+        period_id = period_obj.find(cr, uid, date, context=ctx)[0]
+        partner_id = loan.employee_id.address_home_id.id
+        account_id = journal.default_debit_account_id.id
+        if vtype == 'in':
+            account_id = journal.default_credit_account_id.id
+        # prepare the voucher
+        voucher = {
+            'journal_id': journal_id,
+            'company_id': company_id,
+            'partner_id': partner_id,
+            'type': TRDIR.get(vtype),
+            'name': name,
+            'account_id': account_id,
+            'reference': reference,
+            'amount': amount > 0.0 and amount or 0.0,
+            'date': date,
+            'date_due': date,
+            'period_id': period_id,
+            }
+
+        # Define the voucher line
+        lml = []
+        # Create voucher_lines
+        for line_id in move.line_id:
+            if vtype == 'in' and line_id.credit:
+                continue
+            if vtype == 'out' and line_id.debit:
+                continue
+            account_id = line_id.account_id.id
+            lml.append({
+                'name': line_id.name,
+                'move_line_id': line_id.id,
+                'reconcile': True,
+                'amount': amount > 0.0 and amount or 0.0,
+                'account_id': line_id.account_id.id,
+                'type': CRDIR.get(vtype)
+                })
+        lines = [(0, 0, x) for x in lml]
+        
+                
+        voucher['line_ids'] = lines
+        voucher_id = voucher_obj.create(cr, uid, voucher, context=ctx)
+        # validate now
+        # this may be dangerous, but it is convenient
+        voucher_obj.button_proforma_voucher(cr, uid, [voucher_id], context)
+        return voucher_id
+
     def action_receipt_create(self, cr, uid, ids, context=None):
         """Create accounting entries for this loan"""
-        if context is None:
-            context = {}
-        move_obj = self.pool.get('account.move')
-        move_line_obj = self.pool.get('account.move.line')
-        period_obj = self.pool.get('account.period')
+        ctx = dict(context or {}, account_period_prefer_normal=True)
+
         for loan in self.browse(cr, uid, ids, context=context):
-            ctx = context.copy()
-            ctx.update({'account_period_prefer_normal': True})
             if loan.move_id:
                 continue
 
             # create the move that will contain the accounting entries
-            move_id = move_obj.create(
-                cr,
-                uid,
-                self.account_move_get(cr, uid, loan.id, context=ctx),
+            move_id = self._create_move(
+                cr, 
+                uid, 
+                loan.id,
+                loan.name,
+                loan.account_credit.id,
+                loan.account_debit.id,
+                loan.date_valid,
+                loan.amount,
                 context=ctx)
-            period_id = period_obj.find(cr, uid, loan.date_valid, context=ctx)[0]
-
-            lml = []
-            # create the debit move line
-            lml.append({
-                    'partner_id': loan.employee_id.address_home_id.id,
-                    'name': loan.name,
-                    'debit': loan.amount,
-                    'account_id': loan.account_debit.id,
-                    'date_maturity': loan.date_valid,
-                    'period_id': period_id,
-                    })
-
-            # create the credit move line
-            lml.append({
-                    'partner_id': loan.employee_id.address_home_id.id,
-                    'name': loan.name,
-                    'credit': loan.amount,
-                    'account_id': loan.account_credit.id,
-                    'date_maturity': loan.date_valid,
-                    'period_id': period_id,
-                    })
-            # convert eml into an osv-valid format
-            lines = [(0, 0, x) for x in lml]
-            journal_id = move_obj.browse(cr, uid, move_id, context).journal_id
-            # post the journal entry if 'Skip 'Draft' State for Manual Entries' is checked
-            if journal_id.entry_posted:
-                move_obj.button_validate(cr, uid, [move_id], ctx)
-            move_obj.write(cr, uid, [move_id], {'line_id': lines}, context=ctx)
-            self.write(cr, uid, ids, {'move_id': move_id}, context=ctx)
+                
+            self.write(cr, uid, [loan.id], {'move_id': move_id}, context=ctx)
 
     def action_make_voucher(self, cr, uid, ids, context=None):
         ctx = dict(context or {}, account_period_prefer_normal=True)
+
         voucher_obj = self.pool.get('account.voucher')
         journal_obj = self.pool.get('account.journal')
-        move_line_obj = self.pool.get('account.move.line')
-        company_id = self.pool.get('res.users').browse(cr, uid, uid, context=ctx).company_id.id
 
-        for loan in self.browse(cr, uid, ids, context=context):
+        for loan in self.browse(cr, uid, ids, context=ctx):
             name = _('Loan %s to %s') % (loan.name, loan.employee_id.name)
             partner_id = loan.employee_id.address_home_id.id,
             journal = journal_obj.browse(cr, uid, ctx.get('paymethod_id'), context=context)
             amt = loan.amount
-            voucher = {
-                'journal_id': journal.id,
-                'company_id': company_id,
-                'partner_id': partner_id,
-                'type': 'payment',
-                'name': name,
-                'reference': context.get('reference', _('LOAN %s') % (loan.name)),
-                'account_id': journal.default_credit_account_id.id,
-                'amount': amt > 0.0 and amt or 0.0,
-                'date': loan.date_valid,
-                'date_due': loan.date_valid,
-                'period_id': self.pool.get('account.period').find(
-                    cr, uid, context=ctx)[0],
-                }
-
-            # Define the voucher line
-            lml = []
-            # Create voucher_lines
-            for move_line_id in loan.move_id.line_id:
-                if move_line_id.debit > 0:
-                    continue
-                lml.append({
-                    'name': move_line_id.name,
-                    'move_line_id': move_line_id.id,
-                    'reconcile': True,
-                    'amount': move_line_id.credit > 0 and move_line_id.credit or 0.0,
-                    'account_id': move_line_id.account_id.id,
-                    'type': move_line_id.credit and 'dr' or 'cr',
-                    })
-            lines = [(0, 0, x) for x in lml]
-            voucher['line_ids'] = lines
-            voucher_id = voucher_obj.create(cr, uid, voucher, context=ctx)
+            
+            voucher_id = self._create_voucher(
+                cr, 
+                uid, 
+                loan.id, 
+                loan.move_id.id, 
+                journal.id, 
+                name,
+                'out', 
+                ctx.get('reference', _('LOAN %s') % (loan.name)),
+                loan.date_valid,
+                loan.amount, 
+                context=ctx)
+                
             self.write(cr, uid, [loan.id], {'voucher_id': voucher_id}, context=ctx)
-            self.write(cr, uid, ids, {'voucher_id': voucher_id}, context=ctx)
 
+
+    def action_spontaneous_voucher(self, cr, uid, loan_id, date, amount, context=None):
+        """Create voucher for spontaneous payment"""
+        ctx = dict(context or {}, account_period_prefer_normal=True)
+        journal = journal_obj.browse(cr, uid, ctx.get('paymethod_id'), context=context)
+        loan = self.browse(cr, uid, loan_id, context=ctx)
+        name = _('Payment on Loan %s from %s') % (loan.name, loan.employee_id.name)
+
+        if not amount > loan.balance:
+            raise osv.except_osv(
+                _('Amount error'),
+                _("Spontaneous payment cannot exceed Loan balance"))
+
+        move_id = self._create_move(
+            cr, 
+            uid, 
+            loan.id, 
+            ctx.get('reference', _('LOAN %s') % (loan.name)),
+            loan.account_debit.id,
+            loan.account_credit.id,
+            date,
+            amount,
+            context=ctx)
+
+        voucher_id = self._create_voucher(
+            cr, 
+            uid, 
+            loan.id, 
+            move_id, 
+            journal.id, 
+            name,
+            'in', 
+            ctx.get('reference', _('LOAN %s') % (loan.name)),
+            date,
+            amount, 
+            context=ctx)
+
+        self.write(cr, uid, [loan.id], {'voucher_ids': (4, voucher_id)}, context=ctx)
+        voucher_obj.write(cr, uid, [voucher_id], {'loan_id': loan_id}, context=ctx)
+        
     def loan_give(self, cr, uid, ids, context=None):
         for loan in self.browse(cr, uid, ids, context=context):
             if not loan.employee_id.address_home_id:
@@ -562,12 +668,16 @@ class hr_loan(osv.osv):
                     _("Loan accounting requires '%s' to have a valid Home Adress!" % loan.employee_id.name))
             if not loan.account_debit:
                 raise osv.except_osv(
-                    _('Error!'),
+                    _('No Debit Account!'),
                     _('You must select an account to debit for this loan'))
             if not loan.account_credit:
                 raise osv.except_osv(
-                    _('Error!'),
+                    _('No Transit Account!'),
                     _('You must select an account to transit this loan by'))
+            if not loan.journal_id:
+                raise osv.except_osv(
+                    _('No Journal!'),
+                    _('You must select a journal to record this loan in'))
 
         dummy, view_id = self.pool.get('ir.model.data').get_object_reference(cr, uid, 'hr_loan', 'hr_loan_give_out_view')
 
@@ -577,6 +687,22 @@ class hr_loan(osv.osv):
             'view_id': view_id,
             'view_type': 'form',
             'res_model': 'hr.loan.giveout',
+            'type': 'ir.actions.act_window',
+            'nodestroy': True,
+            'target': 'new',
+            'domain': '[]',
+            'context': context
+        }
+
+    def loan_spontaenous(self, cr, uid, ids, context=None):
+        dummy, view_id = self.pool.get('ir.model.data').get_object_reference(cr, uid, 'hr_loan', 'hr_loan_spontaenous_view')
+
+        return {
+            'name': _("Spontaenous Payment"),
+            'view_mode': 'form',
+            'view_id': view_id,
+            'view_type': 'form',
+            'res_model': 'hr.loan.spontaneous',
             'type': 'ir.actions.act_window',
             'nodestroy': True,
             'target': 'new',
@@ -630,3 +756,44 @@ class hr_loan_giveout(osv.osv_memory):
         return {'type': 'ir.actions.act_window_close'}
 
 hr_loan_giveout()
+
+class hr_loan_spontaneous(osv.osv_memory):
+    """
+    This wizard create a payment voucher for the loan (give out the money)
+    """
+
+    _name = "hr.loan.spontaneous"
+    _description = "Spontaenous Loan Payment"
+
+    _columns = {
+        'paymethod_id': fields.many2one(
+            'account.journal', 
+            'Payment method', 
+            required=True),
+        'amount': fields.float(
+            'Amount',
+            digits_compute=dp.get_precision('Payroll'),
+            required=True),
+        'reference': fields.char(
+            'Payment reference', 
+            size=64, 
+            required=True),
+    }
+
+    def receive(self, cr, uid, ids, context=None):
+        wf_service = netsvc.LocalService('workflow')
+        if context is None:
+            context = {}
+        pool_obj = pooler.get_pool(cr.dbname)
+        loan_obj = pool_obj.get('hr.loan')
+
+        context.update({
+            'paymethod_id': self.browse(cr, uid, ids)[0].paymethod_id.id,
+            'reference': self.browse(cr, uid, ids)[0].reference,
+            })
+
+        loan_obj.action_spontaneous_voucher(cr, uid, [context.get('active_id')], context=context)
+
+        return {'type': 'ir.actions.act_window_close'}
+
+hr_loan_spontaneous()
