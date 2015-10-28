@@ -437,26 +437,6 @@ class hr_loan(osv.osv):
                 ok = False
         return ok
 
-    def account_move_get(self, cr, uid, loan_id, context=None):
-        '''
-        This method prepare the creation of the account move related to the given loan.
-        '''
-        journal_obj = self.pool.get('account.journal')
-        loan = self.browse(cr, uid, loan_id, context=context)
-        company_id = loan.company_id.id
-        date = loan.date
-        ref = loan.name
-        journal_id = False
-        if loan.journal_id:
-            journal_id = loan.journal_id.id
-        else:
-            journal_id = journal_obj.search(cr, uid, [('code', '=', 'MISC'), ('company_id', '=', company_id)])
-            if not journal_id:
-                raise osv.except_osv(_('Error!'), _("No loan journal found. Please make sure you have a journal with type 'general' configured."))
-            journal_id = journal_id[0]
-        return self.pool.get('account.move').account_move_prepare(cr, uid, journal_id, date=date, ref=ref, company_id=company_id, context=context)
-
-
 
     def _create_move(self, cr, uid, loan_id, reference, credit_id, 
                     debit_id, date, amount, context=None):
