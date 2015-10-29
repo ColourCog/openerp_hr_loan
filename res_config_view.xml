@@ -11,7 +11,11 @@
           <group name="loans_grp" col="2">
             <label for="id" string="Loans"/>
             <group>
-              <field name="loan_transfer_account_id"/>
+              <field 
+                name="company_id" 
+                invisible="1"
+                on_change="onchange_company_id(company_id, context)"/>
+              <field name="default_loan_transfer_account_id"/>
               <field name="default_loan_account_id"/>
               <field name="default_advance_account_id"/>
               <field name="default_loan_journal_id"/>

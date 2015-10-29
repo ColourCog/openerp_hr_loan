@@ -26,7 +26,7 @@ class res_company(osv.osv):
     _inherit = "res.company"
 
     _columns = {
-        'loan_transfer_account_id': fields.many2one('account.account',
+        'default_loan_transfer_account_id': fields.many2one('account.account',
             'The transfer account when creating loans'),
         'default_loan_account_id': fields.many2one('account.account',
             'The loan account to use by default'),
@@ -44,34 +44,30 @@ class hr_config_settings(osv.osv_memory):
     _columns = {
         'company_id': fields.many2one('res.company', 'Company', required=True),
 
-        'loan_transfer_account_id': fields.related(
+        'default_loan_transfer_account_id': fields.related(
             'company_id',
-            'loan_transfer_account_id',
+            'default_loan_transfer_account_id',
             type='many2one',
             relation='account.account',
-            string="Advances Transfer Account",
-            domain="[('type','not in',['consolidation','view']), ('company_id', '=', company_id)]"),
+            string="Loans/Advances Transfer Account"),
         'default_loan_account_id': fields.related(
             'company_id',
             'default_loan_account_id',
             type='many2one',
             relation='account.account',
-            string="Loans Account",
-            domain="[('type','not in',['consolidation','view']), ('company_id', '=', company_id)]"),
+            string="Loans Account"),
         'default_advance_account_id': fields.related(
             'company_id',
             'default_advance_account_id',
             type='many2one',
             relation='account.account',
-            string="Advances Account",
-            domain="[('type','not in',['consolidation','view']), ('company_id', '=', company_id)]"),
+            string="Advances Account"),
         'default_loan_journal_id': fields.related(
             'company_id',
             'default_loan_journal_id',
             type='many2one',
             relation='account.journal',
-            string="Loans/Advances Journal",
-            domain="[('company_id', '=', company_id)]"),
+            string="Loans/Advances Journal"),
     }
 
     def _default_company(self, cr, uid, context=None):
@@ -95,19 +91,18 @@ class hr_config_settings(osv.osv_memory):
 
     def onchange_company_id(self, cr, uid, ids, company_id, context=None):
         # update related fields
+        values = {
+            'default_loan_transfer_account_id': False,
+            'default_loan_account_id': False,
+            'default_advance_account_id': False,
+            'default_loan_journal_id': False,
+        }
         if company_id:
             company = self.pool.get('res.company').browse(cr, uid, company_id, context=context)
-            res['value'].update({
-                'loan_transfer_account_id': company.loan_transfer_account_id and company.loan_transfer_account_id.id,
+            values.update({
+                'default_loan_transfer_account_id': company.default_loan_transfer_account_id and company.default_loan_transfer_account_id.id,
                 'default_loan_account_id': company.default_loan_account_id and company.default_loan_account_id.id,
-                'default_loan_account_id': company.default_advance_account_id and company.default_advance_account_id.id,
-                'default_loan_account_id': company.default_loan_journal_id and company.default_loan_journal_id.id,
+                'default_advance_account_id': company.default_advance_account_id and company.default_advance_account_id.id,
+                'default_loan_journal_id': company.default_loan_journal_id and company.default_loan_journal_id.id,
             })
-        else:
-            res['value'].update({
-                'loan_transfer_account_id': False,
-                'default_loan_account_id': False,
-                'default_advance_account_id': False,
-                'default_loan_journal_id': False,
-            })
-        return res
+        return {'value': values}

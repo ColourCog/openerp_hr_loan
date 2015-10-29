@@ -69,8 +69,8 @@ class hr_loan(osv.osv):
 
     def _default_transfer_account(self, cr, uid, context=None):
         user = self.pool.get('res.users').browse(cr, uid, uid, context=context)
-        if user.company_id.loan_transfer_account_id:
-            return user.company_id.loan_transfer_account_id.id
+        if user.company_id.default_loan_transfer_account_id:
+            return user.company_id.default_loan_transfer_account_id.id
         return False
 
     def _default_journal(self, cr, uid, context=None):
