@@ -45,11 +45,10 @@
                 <field name="user_valid" attrs="{'invisible': [('state','=','draft')]}" readonly="1"/>
               </group>
               <group>
-                <field name="is_advance"/>
+                <field name="is_advance" on_change="onchange_advance(is_advance)"/>
                 <field name="amount" on_change="onchange_amount(amount, nb_payments)" />
                 <field name="nb_payments" on_change="onchange_nb_payments(amount, nb_payments)" />
                 <field name="installment"/>
-                <field name="move_id" invisible="1"/>
               </group>
             </group>
             <group>

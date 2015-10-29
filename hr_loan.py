@@ -23,16 +23,6 @@ def _employee_get(obj, cr, uid, context=None):
     return False
 
 
-class account_voucher(osv.osv):
-    _inherit='account.voucher'
-    _name='account.voucher'
-
-    _columns = {
-        'loan_id': fields.many2one('hr.loan', 'Loan'),
-    }
-
-account_voucher()
-
 class hr_loan_payment(osv.osv):
     _name = 'hr.loan.payment'
 
@@ -65,15 +55,29 @@ class hr_loan(osv.osv):
         },
     }
 
-    def _get_journal(self, cr, uid, context=None):
-        if context is None:
-            context = {}
+    def _default_loan_account(self, cr, uid, context=None):
         user = self.pool.get('res.users').browse(cr, uid, uid, context=context)
-        company_id = context.get('company_id', user.company_id.id)
-        journal_obj = self.pool.get('account.journal')
-        domain = [('code', '=', 'MISC'), ('company_id', '=', company_id)]
-        res = journal_obj.search(cr, uid, domain, limit=1)
-        return res and res[0] or False
+        if user.company_id.default_loan_account_id:
+            return user.company_id.default_loan_account_id.id
+        return False
+
+    def _default_advance_account(self, cr, uid, context=None):
+        user = self.pool.get('res.users').browse(cr, uid, uid, context=context)
+        if user.company_id.default_advance_account_id:
+            return user.company_id.default_advance_account_id.id
+        return False
+
+    def _default_transfer_account(self, cr, uid, context=None):
+        user = self.pool.get('res.users').browse(cr, uid, uid, context=context)
+        if user.company_id.loan_transfer_account_id:
+            return user.company_id.loan_transfer_account_id.id
+        return False
+
+    def _default_journal(self, cr, uid, context=None):
+        user = self.pool.get('res.users').browse(cr, uid, uid, context=context)
+        if user.company_id.default_loan_journal_id:
+            return user.company_id.default_loan_journal_id.id
+        return False
 
     def _get_currency(self, cr, uid, context=None):
         res = False
@@ -118,6 +122,14 @@ class hr_loan(osv.osv):
             company_id = employee.company_id.id
             return {'value': {'company_id': company_id}}
 
+    def onchange_advance(self, cr, uid, ids, is_advance, context=None):
+        switch = {
+            True:self._default_advance_account,
+            False:self._default_loan_account,
+        }
+        val = switch.get(is_advance, False)(cr, uid, context=context)
+        return {'value': {'account_credit': val}}
+
     def onchange_amount(self, cr, uid, ids, amount, nb_payments,
                         context=None):
         val = amount / nb_payments
@@ -146,6 +158,8 @@ class hr_loan(osv.osv):
             if res[loan.id] <= 0.0:
                 self.write(cr, uid, ids, {'state': 'paid'}, context=context)
         return res
+
+        
 
     _columns = {
         'name': fields.char('Name', size=64, select=True, readonly=True),
@@ -273,6 +287,9 @@ class hr_loan(osv.osv):
 
     _defaults = {
         'company_id': lambda s, cr, uid, c: s.pool.get('res.company')._company_default_get(cr, uid, 'hr.employee', context=c),
+        'journal_id': _default_journal,
+        'account_debit': _default_loan_account,
+        'account_credit': _default_transfer_account,
         'date': fields.date.context_today,
         'currency_id': _get_currency,
         'nb_payments': 1,
