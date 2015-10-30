@@ -128,7 +128,7 @@ class hr_loan(osv.osv):
             False:self._default_loan_account,
         }
         val = switch.get(is_advance, False)(cr, uid, context=context)
-        return {'value': {'account_credit': val}}
+        return {'value': {'account_debit': val}}
 
     def onchange_amount(self, cr, uid, ids, amount, nb_payments,
                         context=None):
