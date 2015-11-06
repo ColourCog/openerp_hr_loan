@@ -161,10 +161,11 @@ class hr_loan(osv.osv):
             payslip = sum([ p.amount for p in loan.payment_ids])
             vouchers = sum([ v.amount for v in loan.voucher_ids])
             res[loan.id] = loan.amount - (payslip + vouchers)
-            if loan.move_id:
-                self.write(cr, uid, ids, {'state': 'waiting'}, context=context)
-            if res[loan.id] <= 0.0:
-                self.write(cr, uid, ids, {'state': 'paid'}, context=context)
+            if loan.amount:
+                if loan.move_id:
+                    self.write(cr, uid, ids, {'state': 'waiting'}, context=context)
+                if res[loan.id] <= 0.0:
+                    self.write(cr, uid, ids, {'state': 'paid'}, context=context)
         return res
 
         
@@ -284,9 +285,9 @@ class hr_loan(osv.osv):
         'state': fields.selection([
             ('draft', 'New'),
             ('cancelled', 'Cancelled'),
-            ('confirm', 'Waiting Approval'),
+            ('confirm', 'Awaiting Approval'),
             ('accepted', 'Accepted'),
-            ('waiting', 'Waiting Payment'),
+            ('waiting', 'Awaiting Payment'),
             ('paid', 'Paid'),
             ('suspended', 'Suspended'),
             ],
@@ -476,6 +477,8 @@ class hr_loan(osv.osv):
     def condition_paid(self, cr, uid, ids, context=None):
         paid = True
         for loan in self.browse(cr, uid, ids, context=context):
+            if loan.amount > 0:
+                paid = False
             if loan.balance > 0:
                 paid = False
         return paid
@@ -696,7 +699,7 @@ class hr_loan(osv.osv):
                     _("This tool can only be run for one Loan at a time!"))
         for loan in self.browse(cr, uid, ids, context=context):
             if loan.move_id and loan.voucher_id:
-                return True
+                return self.loan_initiate(cr, uid, ids, context)
             if not loan.employee_id.address_home_id:
                 raise osv.except_osv(
                     _('Linked Partner Missing!'),
