@@ -39,6 +39,14 @@ class hr_loan_payment(osv.osv):
         'Payslips must be unique per Loan !'),
     ]
 
+    def unlink(self, cr, uid, ids, context=None):
+        for rec in self.browse(cr, uid, ids, context=context):
+            if rec.slipd_id and rec.slip_id.state not in ['draft', 'cancelled']:
+                raise osv.except_osv(
+                    _('Warning!'),
+                    _('You must cancel the Payslip to delete this payment.'))
+        return super(hr_loan_payment, self).unlink(cr, uid, ids, context)
+
 hr_loan_payment()
 
 
@@ -81,7 +89,7 @@ class hr_loan(osv.osv):
 
     def _get_currency(self, cr, uid, context=None):
         res = False
-        journal_id = self._get_journal(cr, uid, context=context)
+        journal_id = self._default_journal(cr, uid, context=context)
         if journal_id:
             journal = self.pool.get('account.journal').browse(
                     cr,
@@ -323,7 +331,7 @@ class hr_loan(osv.osv):
 
     def unlink(self, cr, uid, ids, context=None):
         for rec in self.browse(cr, uid, ids, context=context):
-            if rec.state not in ['draft', 'cancelled']:
+            if rec.amount and rec.state not in ['draft', 'cancelled']:
                 raise osv.except_osv(
                     _('Warning!'),
                     _('You must cancel the Loan before you can delete it.'))
@@ -397,6 +405,15 @@ class hr_loan(osv.osv):
                     [loan.id],
                     {'payment_ids': []},
                     context=context)
+            if loan.voucher_ids:
+                l = [p.id for p in loan.voucher_ids]
+                voucher_obj.unlink(cr, uid, l, context=context)
+                self.write(
+                    cr,
+                    uid,
+                    [loan.id],
+                    {'voucher_ids': []},
+                    context=context)
             if loan.voucher_id:
                 voucher_obj.unlink(
                     cr,
@@ -405,6 +422,15 @@ class hr_loan(osv.osv):
                     context=context)
 
     def loan_cancel(self, cr, uid, ids, context=None):
+        for loan in self.browse(cr, uid, ids, context=context):
+            if loan.payment_ids:
+                raise osv.except_osv(
+                    _('Cancel Error'),
+                    _("Loan has some payslip payments.\nPlease cancel the payslips before proceeding."))
+            if loan.voucher_ids:
+                raise osv.except_osv(
+                    _('Cancel Error'),
+                    _("Loan has some spontaneous payments.\nPlease cancel/delete them before proceeding."))
         self.clean_loan(cr, uid, ids, context=context)
         return self.write(
             cr,
@@ -448,11 +474,11 @@ class hr_loan(osv.osv):
             context=context)
 
     def condition_paid(self, cr, uid, ids, context=None):
-        ok = True
+        paid = True
         for loan in self.browse(cr, uid, ids, context=context):
             if loan.balance > 0:
-                ok = False
-        return ok
+                paid = False
+        return paid
 
 
     def _create_move(self, cr, uid, loan_id, reference, credit_id, 
@@ -694,11 +720,11 @@ class hr_loan(osv.osv):
             'context': context
         }
 
-    def loan_spontaenous(self, cr, uid, ids, context=None):
-        dummy, view_id = self.pool.get('ir.model.data').get_object_reference(cr, uid, 'hr_loan', 'hr_loan_spontaenous_view')
+    def loan_spontaneous(self, cr, uid, ids, context=None):
+        dummy, view_id = self.pool.get('ir.model.data').get_object_reference(cr, uid, 'hr_loan', 'hr_loan_spontaneous_view')
 
         return {
-            'name': _("Spontaenous Payment"),
+            'name': _("spontaneous Payment"),
             'view_mode': 'form',
             'view_id': view_id,
             'view_type': 'form',
@@ -767,7 +793,7 @@ class hr_loan_spontaneous(osv.osv_memory):
     """
 
     _name = "hr.loan.spontaneous"
-    _description = "Spontaenous Loan Payment"
+    _description = "spontaneous Loan Payment"
 
     _columns = {
         'paymethod_id': fields.many2one(

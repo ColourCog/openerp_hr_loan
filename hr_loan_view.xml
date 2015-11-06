@@ -29,7 +29,7 @@
             <button name="cancel" states="confirm" string="Refuse" groups="base.group_hr_manager" />
             <button name="cancel" states="accepted,waiting,suspended,paid" string="Cancel" groups="base.group_hr_manager" />
             <button name="loan_give" states="accepted" string="Give out Loan" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
-            <button name="loan_spontaenous" states="waiting" string="Spontaneous Payment" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
+            <button name="loan_spontaneous" states="waiting" string="Spontaneous Payment" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="print_slip" states="waiting,suspended,accepted" icon="gtk-print" string="Print Slip" type="object"/>
             <field name="state" widget="statusbar" statusbar_visible="draft,confirm,accepted,waiting,paid" statusbar_colors='{"confirm":"blue","cancelled":"red"}'/>
           </header>
@@ -167,12 +167,12 @@
         </field>
     </record>
 
-    <record id="hr_loan_spontaenous_view" model="ir.ui.view">
+    <record id="hr_loan_spontaneous_view" model="ir.ui.view">
         <field name="name">hr.loan.spontaneous.form</field>
         <field name="model">hr.loan.spontaneous</field>
         <field name="arch" type="xml">
             <form string="Give out Loan" version="7.0">
-                <p>Spontaenous Loan Repayment</p>
+                <p>spontaneous Loan Repayment</p>
                 <group>
                   <field name="date" />
                   <field name="paymethod_id" domain="[('type', 'in', ['cash','bank'])]"/>
