@@ -623,6 +623,8 @@ class hr_loan(osv.osv):
         journal_obj = self.pool.get('account.journal')
 
         for loan in self.browse(cr, uid, ids, context=ctx):
+            if loan.voucher_id:
+                continue
             name = _('Loan %s to %s') % (loan.name, loan.employee_id.name)
             partner_id = loan.employee_id.address_home_id.id,
             journal = journal_obj.browse(cr, uid, ctx.get('paymethod_id'), context=context)
@@ -687,7 +689,14 @@ class hr_loan(osv.osv):
         self.write(cr, uid, [loan.id], {'voucher_ids': [(4, voucher_id)]}, context=ctx)
         
     def loan_give(self, cr, uid, ids, context=None):
+        # only one loan at a time
+        if not len(ids) == 1:
+                raise osv.except_osv(
+                    _('Concurrency Error'),
+                    _("This tool can only be run for one Loan at a time!"))
         for loan in self.browse(cr, uid, ids, context=context):
+            if loan.move_id and loan.voucher_id:
+                return True
             if not loan.employee_id.address_home_id:
                 raise osv.except_osv(
                     _('Linked Partner Missing!'),
@@ -706,7 +715,6 @@ class hr_loan(osv.osv):
                     _('You must select a journal to record this loan in'))
 
         dummy, view_id = self.pool.get('ir.model.data').get_object_reference(cr, uid, 'hr_loan', 'hr_loan_give_out_view')
-
         return {
             'name': _("Give out Loan"),
             'view_mode': 'form',

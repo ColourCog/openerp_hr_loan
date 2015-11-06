@@ -35,7 +35,7 @@
             <field name="wkf_id" ref="wkf_loans"/>
             <field name="name">waiting</field>
             <field name="kind">function</field>
-            <field name="action">loan_initiate()</field>
+            <field name="action">loan_give()</field>
         </record>
 
          <record id="act_paid" model="workflow.activity">
@@ -67,18 +67,24 @@
         </record>
 
         <record id="t3" model="workflow.transition">
+            <field name="act_from" ref="act_accepted"/>
+            <field name="act_to" ref="act_waiting"/>
+            <field name="signal">waiting</field>
+        </record>
+
+        <record id="t4" model="workflow.transition">
             <field name="act_from" ref="act_confirm"/>
             <field name="act_to" ref="act_cancel"/>
             <field name="signal">cancel</field>
         </record>
 
-        <record id="t4" model="workflow.transition">
+        <record id="t5" model="workflow.transition">
             <field name="act_from" ref="act_accepted"/>
             <field name="act_to" ref="act_cancel"/>
             <field name="signal">cancel</field>
         </record>
         
-        <record id="t5" model="workflow.transition">
+        <record id="t6" model="workflow.transition">
             <field name="act_from" ref="act_waiting"/>
             <field name="act_to" ref="act_cancel"/>
             <field name="signal">cancel</field>
