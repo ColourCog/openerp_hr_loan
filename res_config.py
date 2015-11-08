@@ -100,9 +100,9 @@ class hr_config_settings(osv.osv_memory):
         if company_id:
             company = self.pool.get('res.company').browse(cr, uid, company_id, context=context)
             values.update({
-                'default_loan_transfer_account_id': company.default_loan_transfer_account_id and company.default_loan_transfer_account_id.id,
-                'default_loan_account_id': company.default_loan_account_id and company.default_loan_account_id.id,
-                'default_advance_account_id': company.default_advance_account_id and company.default_advance_account_id.id,
-                'default_loan_journal_id': company.default_loan_journal_id and company.default_loan_journal_id.id,
+                'default_loan_transfer_account_id': company.default_loan_transfer_account_id and company.default_loan_transfer_account_id.id or False,
+                'default_loan_account_id': company.default_loan_account_id and company.default_loan_account_id.id or False,
+                'default_advance_account_id': company.default_advance_account_id and company.default_advance_account_id.id or False,
+                'default_loan_journal_id': company.default_loan_journal_id and company.default_loan_journal_id.id or False,
             })
         return {'value': values}
