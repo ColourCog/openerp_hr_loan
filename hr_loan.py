@@ -1,5 +1,5 @@
+# -*- coding: utf-8 -*-
 import time
-
 from datetime import datetime, date
 from openerp import netsvc
 from openerp import pooler
@@ -239,24 +239,17 @@ class hr_loan(osv.osv):
                 'hr.loan.payment': (_get_loan_from_payment, None, 10),
                 'account.voucher': (_get_loan_from_voucher, None, 10),
             }),
-
         'journal_id': fields.many2one(
             'account.journal',
             'Journal',
-            readonly=True,
-            states={'accepted': [('readonly', False)]},
             help="The journal used to record loans."),
         'account_debit': fields.many2one(
             'account.account',
             'Debit Account',
-            readonly=True,
-            states={'accepted': [('readonly', False)]},
             help="The account in which the loan will be recorded"),
         'account_credit': fields.many2one(
             'account.account',
             'Transit Account',
-            readonly=True,
-            states={'accepted': [('readonly', False)]},
             help="The account from which the loan will be paid to the employee"),
         'move_id': fields.many2one(
             'account.move', 
@@ -697,25 +690,25 @@ class hr_loan(osv.osv):
                 raise osv.except_osv(
                     _('Concurrency Error'),
                     _("This tool can only be run for one Loan at a time!"))
-        for loan in self.browse(cr, uid, ids, context=context):
-            if loan.move_id and loan.voucher_id:
-                return self.loan_initiate(cr, uid, ids, context)
-            if not loan.employee_id.address_home_id:
-                raise osv.except_osv(
-                    _('Linked Partner Missing!'),
-                    _("Loan accounting requires '%s' to have a valid Home Adress!" % loan.employee_id.name))
-            if not loan.account_debit:
-                raise osv.except_osv(
-                    _('No Debit Account!'),
-                    _('You must select an account to debit for this loan'))
-            if not loan.account_credit:
-                raise osv.except_osv(
-                    _('No Transit Account!'),
-                    _('You must select an account to transit this loan by'))
-            if not loan.journal_id:
-                raise osv.except_osv(
-                    _('No Journal!'),
-                    _('You must select a journal to record this loan in'))
+        loan = self.browse(cr, uid, ids[0], context=context)
+        if loan.move_id and loan.voucher_id:
+            return self.loan_initiate(cr, uid, ids, context)
+        if not loan.employee_id.address_home_id:
+            raise osv.except_osv(
+                _('Linked Partner Missing!'),
+                _("Loan accounting requires '%s' to have a valid Home Adress!" % loan.employee_id.name))
+        if not loan.account_debit:
+            raise osv.except_osv(
+                _('No Debit Account!'),
+                _('You must select an account to debit for this loan'))
+        if not loan.account_credit:
+            raise osv.except_osv(
+                _('No Transit Account!'),
+                _('You must select an account to transit this loan by'))
+        if not loan.journal_id:
+            raise osv.except_osv(
+                _('No Journal!'),
+                _('You must select a journal to record this loan in'))
 
         dummy, view_id = self.pool.get('ir.model.data').get_object_reference(cr, uid, 'hr_loan', 'hr_loan_give_out_view')
         return {

@@ -1,10 +1,4 @@
-#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-#
-#  hr_employee.py
-#  
-
-
 from openerp.osv import fields, osv
 from openerp.tools.translate import _
 import openerp.addons.decimal_precision as dp

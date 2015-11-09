@@ -28,7 +28,7 @@
             <button name="loan_resume" states="suspended" string="Resume" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="cancel" states="confirm" string="Refuse" groups="base.group_hr_manager" />
             <button name="cancel" states="accepted,waiting,suspended,paid" string="Cancel" groups="base.group_hr_manager" />
-            <button name="waiting" states="accepted" string="Give out Loan" groups="base.group_hr_manager" class="oe_highlight"/>
+            <button name="loan_give" type="object" states="accepted" string="Give out Loan" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="loan_spontaneous" states="waiting" string="Spontaneous Payment" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="print_slip" states="waiting,suspended,accepted" icon="gtk-print" string="Print Slip" type="object"/>
             <field name="state" widget="statusbar" statusbar_visible="draft,confirm,accepted,waiting,paid" statusbar_colors='{"confirm":"blue","cancelled":"red"}'/>
