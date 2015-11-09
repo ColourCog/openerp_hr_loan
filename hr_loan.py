@@ -490,7 +490,7 @@ class hr_loan(osv.osv):
         move_id =  move_obj.create(
             cr, 
             uid, 
-            self.pool.get('account.move').account_move_prepare(
+            move_obj.account_move_prepare(
                 cr, 
                 uid, 
                 loan.journal_id.id, 
