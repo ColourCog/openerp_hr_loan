@@ -539,12 +539,12 @@ class hr_loan(osv.osv):
         voucher_obj = self.pool.get('account.voucher')
         journal_obj = self.pool.get('account.journal')
         move_obj = self.pool.get('account.move')
+        move_line_obj = self.pool.get('account.move.line')
         move = move_obj.browse(cr, uid, move_id, context=ctx)
         loan = self.browse(cr, uid, loan_id, context=ctx)
         journal = journal_obj.browse(cr, uid, journal_id, context=ctx)
         company_id = loan.company_id.id
         period_id = period_obj.find(cr, uid, date, context=ctx)[0]
-        partner_id = loan.employee_id.address_home_id.id
         account_id = journal.default_debit_account_id.id
         if vtype == 'in':
             account_id = journal.default_credit_account_id.id
@@ -552,7 +552,6 @@ class hr_loan(osv.osv):
         voucher = {
             'journal_id': journal_id,
             'company_id': company_id,
-            'partner_id': partner_id,
             'type': TRDIR.get(vtype),
             'name': name,
             'account_id': account_id,
@@ -565,21 +564,29 @@ class hr_loan(osv.osv):
 
         # Define the voucher line
         lml = []
+        #order the lines by most old first
+        mlids = [l.id for l in move.line_id]
+        mlids.reverse()
         # Create voucher_lines
-        for line_id in move.line_id:
+        account_move_lines = move_line_obj.browse(cr, uid, mlids, context=context)
+
+        for line_id in account_move_lines:
             if vtype == 'in' and line_id.credit:
                 continue
             if vtype == 'out' and line_id.debit:
                 continue
             account_id = line_id.account_id.id
+            voucher['partner_id'] = line_id.partner_id.id
+            amt = line_id.credit and line_id.credit or line_id.debit
             lml.append({
                 'name': line_id.name,
                 'move_line_id': line_id.id,
-                'reconcile': True,
-                'amount': amount > 0.0 and amount or 0.0,
+                'reconcile': (amt <= amount),
+                'amount': amt < amount and amt or amount,
                 'account_id': line_id.account_id.id,
                 'type': CRDIR.get(vtype)
                 })
+            amount -= amt
         lines = [(0, 0, x) for x in lml]
         
                 
