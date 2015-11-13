@@ -584,7 +584,7 @@ class hr_loan(osv.osv):
         mlids.reverse()
         # Create voucher_lines
         account_move_lines = move_line_obj.browse(cr, uid, mlids, context=context)
-
+        amount_unreconciled = amount
         for line_id in account_move_lines:
             if vtype == 'in' and line_id.credit:
                 continue
@@ -593,11 +593,12 @@ class hr_loan(osv.osv):
             account_id = line_id.account_id.id
             voucher['partner_id'] = line_id.partner_id.id
             amt = line_id.credit and line_id.credit or line_id.debit
+            
             lml.append({
                 'name': line_id.name,
                 'move_line_id': line_id.id,
                 'reconcile': (amt <= amount),
-                'amount': amt < amount and amt or amount,
+                'amount': amt < amount and amt or max(0, amount),
                 'account_id': line_id.account_id.id,
                 'type': CRDIR.get(vtype)
                 })
