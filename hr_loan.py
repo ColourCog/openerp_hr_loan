@@ -229,6 +229,10 @@ class hr_loan(osv.osv):
             'account.voucher',
             'loan_id',
             'Loan Spontaneous Payments'),
+        'move_ids': fields.one2many(
+            'account.move',
+            'loan_id',
+            'Loan Spontaneous Payments moves'),
         'balance': fields.function(
             _get_balance,
             type='float',
@@ -384,12 +388,20 @@ class hr_loan(osv.osv):
         move_obj = self.pool.get('account.move')
         voucher_obj = self.pool.get('account.voucher')
         for loan in self.browse(cr, uid, ids, context=context):
+            # Giveout
+            if loan.voucher_id:
+                voucher_obj.unlink(
+                    cr,
+                    uid,
+                    [loan.voucher_id.id],
+                    context=context)
             if loan.move_id:
                 move_obj.unlink(
                     cr,
                     uid,
                     [loan.move_id.id],
                     context=context)
+            # Payments
             if loan.payment_ids:
                 l = [p.id for p in loan.payment_ids]
                 pay_obj.unlink(cr, uid, l, context=context)
@@ -408,11 +420,14 @@ class hr_loan(osv.osv):
                     [loan.id],
                     {'voucher_ids': []},
                     context=context)
-            if loan.voucher_id:
-                voucher_obj.unlink(
+            if loan.move_ids:
+                l = [p.id for p in loan.move_ids]
+                move_obj.unlink(cr, uid, l, context=context)
+                self.write(
                     cr,
                     uid,
-                    [loan.voucher_id.id],
+                    [loan.id],
+                    {'move_ids': []},
                     context=context)
 
     def loan_cancel(self, cr, uid, ids, context=None):
@@ -688,8 +703,11 @@ class hr_loan(osv.osv):
             date,
             amount, 
             context=ctx)
-
-        self.write(cr, uid, [loan.id], {'voucher_ids': [(4, voucher_id)]}, context=ctx)
+        vals = {
+            'move_ids': [(4, move_id)],
+            'voucher_ids': [(4, voucher_id)],
+        }
+        self.write(cr, uid, [loan.id], vals, context=ctx)
         
     def loan_give(self, cr, uid, ids, context=None):
         # only one loan at a time
