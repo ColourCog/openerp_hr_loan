@@ -39,14 +39,6 @@ class hr_loan_payment(osv.osv):
         'Payslips must be unique per Loan !'),
     ]
 
-    def unlink(self, cr, uid, ids, context=None):
-        for rec in self.browse(cr, uid, ids, context=context):
-            if rec.slipd_id and rec.slip_id.state not in ['draft', 'cancelled']:
-                raise osv.except_osv(
-                    _('Warning!'),
-                    _('You must cancel the Payslip to delete this payment.'))
-        return super(hr_loan_payment, self).unlink(cr, uid, ids, context)
-
 hr_loan_payment()
 
 
@@ -403,6 +395,11 @@ class hr_loan(osv.osv):
                     context=context)
             # Payments
             if loan.payment_ids:
+                for rec in loan.payment_ids:
+                    if rec.slip_id and rec.slip_id.state not in ['draft', 'cancelled']:
+                        raise osv.except_osv(
+                            _('Warning!'),
+                            _('You must cancel the Payslip to delete this payment.'))
                 l = [p.id for p in loan.payment_ids]
                 pay_obj.unlink(cr, uid, l, context=context)
                 self.write(
@@ -735,7 +732,6 @@ class hr_loan(osv.osv):
             raise osv.except_osv(
                 _('No Journal!'),
                 _('You must select a journal to record this loan in'))
-
         dummy, view_id = self.pool.get('ir.model.data').get_object_reference(cr, uid, 'hr_loan', 'hr_loan_give_out_view')
         return {
             'name': _("Give out Loan"),
@@ -789,7 +785,16 @@ class hr_loan_giveout(osv.osv_memory):
 
     _name = "hr.loan.giveout"
     _description = "Give out the Loan"
-
+    
+    def _get_default_reference(self, cr, uid, context=None):
+        if context is None:
+            context = {}
+        pool_obj = pooler.get_pool(cr.dbname)
+        loan_obj = pool_obj.get('hr.loan')
+        loan = loan_obj.browse(cr, uid, context.get('active_id'), context=context)
+        return loan.name
+        
+        
     _columns = {
         'paymethod_id': fields.many2one('account.journal', 'Payment method', required=True),
         'reference': fields.char(
@@ -797,6 +802,9 @@ class hr_loan_giveout(osv.osv_memory):
             size=64, 
             required=True,
             help="Check number, or short memo"),
+    }
+    _defaults = {
+        'reference': _get_default_reference,
     }
 
     def give_out(self, cr, uid, ids, context=None):

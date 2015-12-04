@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name" : "Loan Management",
-    "version" : "3.3", 
+    "version" : "3.4", 
     "category" : "Human Resources", 
     "sequence": 40,
     "complexity" : "normal", 

@@ -19,7 +19,7 @@ class hr_payslip(osv.osv):
                     payment = {
                         'loan_id': loan.id,
                         'slip_id': slip.id,
-                        'amount': loan.installment,
+                        'amount': loan.balance > loan.installment and loan.installment or loan.balance,
                     }
                     pay_obj.create(cr, uid, payment, context=context)
         return super(hr_payslip, self).process_sheet(cr, uid, ids, context=context)
