@@ -262,10 +262,10 @@ class hr_loan(osv.osv):
         'date_valid': fields.date(
             'Validation Date',
             select=True,
-            help="Date of loan validation by hierarchy."),
+            help="Date of loan validation by management"),
         'user_valid': fields.many2one(
             'res.users',
-            'Validation By',
+            'Validated By',
             readonly=True,
             states={
                 'draft': [('readonly', False)],
@@ -581,13 +581,11 @@ class hr_loan(osv.osv):
         mlids.reverse()
         # Create voucher_lines
         account_move_lines = move_line_obj.browse(cr, uid, mlids, context=context)
-        amount_unreconciled = amount
         for line_id in account_move_lines:
             if vtype == 'in' and line_id.credit:
                 continue
             if vtype == 'out' and line_id.debit:
                 continue
-            account_id = line_id.account_id.id
             voucher['partner_id'] = line_id.partner_id.id
             amt = line_id.credit and line_id.credit or line_id.debit
             
@@ -827,7 +825,7 @@ hr_loan_giveout()
 
 class hr_loan_spontaneous(osv.osv_memory):
     """
-    This wizard create a payment voucher for the loan (give out the money)
+    This wizard create a receipt voucher for the loan (receive money)
     """
 
     _name = "hr.loan.spontaneous"
