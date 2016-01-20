@@ -2,16 +2,16 @@
 <openerp>
     <data>            
 
-        <report 
-            auto="False"
-            id="hr_loan_report"
-            model="hr.loan"
-            name="hr.loan.slip"
-            rml="hr_loan/report/hr_loan_slip.rml"
-            string="Loan Slip" 
-            usage="default"
-            attachment_use="False"
-            />
+        <record id="hr_loan_report" model="ir.actions.report.xml">
+            <field name="auto" eval="False"/>
+            <field name="model">hr.loan</field>
+            <field name="report_name">hr.loan.slip</field>
+            <field name="report_type">pdf</field>
+            <field name="report_rml">hr_loan/report/hr_loan_slip.rml</field>
+            <field name="name">Loan Slip</field>
+            <field name="attachment_use" eval="False"/>
+            <field name="usage">default</field>
+        </record>
 
     </data>
 </openerp>
