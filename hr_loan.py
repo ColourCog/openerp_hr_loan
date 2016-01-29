@@ -120,7 +120,7 @@ class hr_loan(osv.osv):
                 employee_id,
                 context=context)
             company_id = employee.company_id.id
-            return {'value': {'company_id': company_id}}
+        return {'value': {'company_id': company_id}}
 
     def onchange_advance(self, cr, uid, ids, is_advance, context=None):
         switch = {
