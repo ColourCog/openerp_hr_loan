@@ -31,7 +31,7 @@
             <button name="loan_give" type="object" states="accepted" string="Give out Loan" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="loan_spontaneous" states="waiting" string="Spontaneous Payment" type="object" groups="base.group_hr_manager" class="oe_highlight"/>
             <button name="print_slip" states="waiting,suspended,accepted" icon="gtk-print" string="Print Slip" type="object"/>
-            <field name="state" widget="statusbar" statusbar_visible="draft,confirm,accepted,waiting,paid" statusbar_colors='{"confirm":"blue","cancelled":"red"}'/>
+            <field name="state" widget="statusbar" statusbar_visible="draft,confirm,accepted,waiting,paid" statusbar_colors='{"cancelled":"red"}'/>
           </header>
           <sheet>
             <h1> <label string="Loan"/> <field name="name" class="oe_inline" readonly="1"/> </h1>
