@@ -488,7 +488,6 @@ class hr_loan(osv.osv):
                 paid = False
         return paid
 
-
     def _create_move(self, cr, uid, loan_id, reference, credit_id, 
                     debit_id, date, amount, context=None):
         """return a move, given the variables."""
