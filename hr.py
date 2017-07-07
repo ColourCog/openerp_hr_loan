@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 #  hr_employee.py
-#  
+#
 
 
 from openerp.osv import fields, osv
@@ -30,6 +30,14 @@ class hr_employee(osv.osv):
         "loan_ids": fields.one2many("hr.loan", "employee_id", "Loans"),
         'total_loan': fields.function(_calculate_total_loan, method=True, type='float', string='Total Pending Loans', digits_compute=dp.get_precision('Payroll'), help="Sum of all loans of employee."),
     }
+
+    def copy(self, cr, uid, employee_id, default=None, context=None):
+        default = default or {}
+        default.update({
+            'loan_ids': [],
+        })
+        return super(hr_employee, self).copy(cr, uid, employee_id, default, context=context)
+
 
 hr_employee()
 

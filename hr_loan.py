@@ -28,7 +28,7 @@ class hr_loan_payment(osv.osv):
 
     _columns = {
         'loan_id': fields.many2one('hr.loan', 'Loan', required=True),
-        'slip_id': fields.many2one('hr.payslip', 'Payslip', required=True),
+        'slip_id': fields.many2one('hr.payslip', 'Payslip', required=True, ondelete="cascade"),
         'amount': fields.float(
             'Amount',
             digits_compute=dp.get_precision('Payroll')),
@@ -97,7 +97,7 @@ class hr_loan(osv.osv):
         pay_obj = self.pool.get('hr.loan.payment')
         return [p.loan_id.id
                 for p in pay_obj.browse(cr, uid, ids, context=context)]
-    
+
     def _get_loan_from_voucher(self, cr, uid, ids, context=None):
         voucher_obj = self.pool.get('account.voucher')
         return [p.loan_id.id
@@ -124,8 +124,8 @@ class hr_loan(osv.osv):
 
     def onchange_advance(self, cr, uid, ids, is_advance, context=None):
         switch = {
-            True:self._default_advance_account,
-            False:self._default_loan_account,
+            True: self._default_advance_account,
+            False: self._default_loan_account,
         }
         val = switch.get(is_advance, False)(cr, uid, context=context)
         return {'value': {'account_debit': val}}
@@ -160,7 +160,7 @@ class hr_loan(osv.osv):
                     self.write(cr, uid, ids, {'state': 'paid'}, context=context)
         return res
 
-        
+
 
     _columns = {
         'name': fields.char('Name', size=64, select=True, readonly=True),
@@ -248,7 +248,7 @@ class hr_loan(osv.osv):
             'Transit Account',
             help="The account from which the loan will be paid to the employee"),
         'move_id': fields.many2one(
-            'account.move', 
+            'account.move',
             'Journal Entry',
             readonly=True),
         'voucher_id': fields.many2one(
@@ -315,16 +315,13 @@ class hr_loan(osv.osv):
             'name': self.pool.get('ir.sequence').get(cr, uid, 'hr.loan') or '/',
             'balance': False,
             'payment_ids': [],
+            'voucher_ids': [],
             'move_id': False,
         })
         return super(hr_loan, self).copy(cr, uid, loan_id, default, context=context)
 
     def unlink(self, cr, uid, ids, context=None):
-        for rec in self.browse(cr, uid, ids, context=context):
-            if rec.amount and rec.state not in ['draft', 'cancelled']:
-                raise osv.except_osv(
-                    _('Warning!'),
-                    _('You must cancel the Loan before you can delete it.'))
+        self.clean_loan(cr, uid, ids, context=context)
         return super(hr_loan, self).unlink(cr, uid, ids, context)
 
     # TOOLS
@@ -396,7 +393,7 @@ class hr_loan(osv.osv):
             # Payments
             if loan.payment_ids:
                 for rec in loan.payment_ids:
-                    if rec.slip_id and rec.slip_id.state not in ['draft', 'cancelled']:
+                    if rec.slip_id and rec.slip_id.employee_id == loan.employee_id and rec.slip_id.state not in ['draft', 'cancelled']:
                         raise osv.except_osv(
                             _('Warning!'),
                             _('You must cancel the Payslip to delete this payment.'))
@@ -429,10 +426,6 @@ class hr_loan(osv.osv):
 
     def loan_cancel(self, cr, uid, ids, context=None):
         for loan in self.browse(cr, uid, ids, context=context):
-            if loan.payment_ids:
-                raise osv.except_osv(
-                    _('Cancel Error'),
-                    _("Loan has some payslip payments.\nPlease cancel the payslips before proceeding."))
             if loan.voucher_ids:
                 raise osv.except_osv(
                     _('Cancel Error'),
@@ -488,7 +481,7 @@ class hr_loan(osv.osv):
                 paid = False
         return paid
 
-    def _create_move(self, cr, uid, loan_id, reference, credit_id, 
+    def _create_move(self, cr, uid, loan_id, reference, credit_id,
                     debit_id, date, amount, context=None):
         """return a move, given the variables."""
         ctx = dict(context or {}, account_period_prefer_normal=True)
@@ -499,18 +492,18 @@ class hr_loan(osv.osv):
         period_id = period_obj.find(cr, uid, date, context=ctx)[0]
 
         move_id =  move_obj.create(
-            cr, 
-            uid, 
+            cr,
+            uid,
             move_obj.account_move_prepare(
-                cr, 
-                uid, 
-                loan.journal_id.id, 
-                date=date, 
-                ref=reference, 
-                company_id=company_id, 
+                cr,
+                uid,
+                loan.journal_id.id,
+                date=date,
+                ref=reference,
+                company_id=company_id,
                 context=ctx),
             context=ctx)
-            
+
 
         lml = []
         # create the debit move line
@@ -540,8 +533,8 @@ class hr_loan(osv.osv):
             move_obj.button_validate(cr, uid, [move_id], ctx)
         return move_id
 
-    def _create_voucher(self, cr, uid, loan_id, move_id, journal_id, 
-                        name, vtype, reference, date, amount, 
+    def _create_voucher(self, cr, uid, loan_id, move_id, journal_id,
+                        name, vtype, reference, date, amount,
                         context=None):
         ctx = dict(context or {}, account_period_prefer_normal=True)
         CRDIR = {'in': 'cr', 'out':'dr'}
@@ -587,7 +580,7 @@ class hr_loan(osv.osv):
                 continue
             voucher['partner_id'] = line_id.partner_id.id
             amt = line_id.credit and line_id.credit or line_id.debit
-            
+
             lml.append({
                 'name': line_id.name,
                 'move_line_id': line_id.id,
@@ -598,8 +591,8 @@ class hr_loan(osv.osv):
                 })
             amount -= amt
         lines = [(0, 0, x) for x in lml]
-        
-                
+
+
         voucher['line_ids'] = lines
         voucher_id = voucher_obj.create(cr, uid, voucher, context=ctx)
         # validate now
@@ -617,8 +610,8 @@ class hr_loan(osv.osv):
 
             # create the move that will contain the accounting entries
             move_id = self._create_move(
-                cr, 
-                uid, 
+                cr,
+                uid,
                 loan.id,
                 loan.name,
                 loan.account_credit.id,
@@ -626,7 +619,7 @@ class hr_loan(osv.osv):
                 loan.date_valid,
                 loan.amount,
                 context=ctx)
-                
+
             self.write(cr, uid, [loan.id], {'move_id': move_id}, context=ctx)
 
     def action_make_voucher(self, cr, uid, ids, context=None):
@@ -642,20 +635,20 @@ class hr_loan(osv.osv):
             partner_id = loan.employee_id.address_home_id.id,
             journal = journal_obj.browse(cr, uid, ctx.get('paymethod_id'), context=context)
             amt = loan.amount
-            
+
             voucher_id = self._create_voucher(
-                cr, 
-                uid, 
-                loan.id, 
-                loan.move_id.id, 
-                journal.id, 
+                cr,
+                uid,
+                loan.id,
+                loan.move_id.id,
+                journal.id,
                 name,
-                'out', 
+                'out',
                 ctx.get('reference', _('LOAN %s') % (loan.name)),
                 loan.date_valid,
-                loan.amount, 
+                loan.amount,
                 context=ctx)
-                
+
             self.write(cr, uid, [loan.id], {'voucher_id': voucher_id}, context=ctx)
 
 
@@ -676,9 +669,9 @@ class hr_loan(osv.osv):
                 _("Spontaneous payment cannot exceed Loan balance"))
 
         move_id = self._create_move(
-            cr, 
-            uid, 
-            loan.id, 
+            cr,
+            uid,
+            loan.id,
             ctx.get('reference', _('LOAN %s') % (loan.name)),
             loan.account_debit.id,
             loan.account_credit.id,
@@ -687,23 +680,23 @@ class hr_loan(osv.osv):
             context=ctx)
 
         voucher_id = self._create_voucher(
-            cr, 
-            uid, 
-            loan.id, 
-            move_id, 
-            journal.id, 
+            cr,
+            uid,
+            loan.id,
+            move_id,
+            journal.id,
             name,
-            'in', 
+            'in',
             ctx.get('reference', _('LOAN %s') % (loan.name)),
             date,
-            amount, 
+            amount,
             context=ctx)
         vals = {
             'move_ids': [(4, move_id)],
             'voucher_ids': [(4, voucher_id)],
         }
         self.write(cr, uid, [loan.id], vals, context=ctx)
-        
+
     def loan_give(self, cr, uid, ids, context=None):
         # only one loan at a time
         if not len(ids) == 1:
@@ -782,7 +775,7 @@ class hr_loan_giveout(osv.osv_memory):
 
     _name = "hr.loan.giveout"
     _description = "Give out the Loan"
-    
+
     def _get_default_reference(self, cr, uid, context=None):
         if context is None:
             context = {}
@@ -790,13 +783,13 @@ class hr_loan_giveout(osv.osv_memory):
         loan_obj = pool_obj.get('hr.loan')
         loan = loan_obj.browse(cr, uid, context.get('active_id'), context=context)
         return loan.name
-        
-        
+
+
     _columns = {
         'paymethod_id': fields.many2one('account.journal', 'Payment method', required=True),
         'reference': fields.char(
-            'Payment reference', 
-            size=64, 
+            'Payment reference',
+            size=64,
             required=True,
             help="Check number, or short memo"),
     }
@@ -832,16 +825,16 @@ class hr_loan_spontaneous(osv.osv_memory):
 
     _columns = {
         'paymethod_id': fields.many2one(
-            'account.journal', 
-            'Payment method', 
+            'account.journal',
+            'Payment method',
             required=True),
         'amount': fields.float(
             'Amount',
             digits_compute=dp.get_precision('Payroll'),
             required=True),
         'reference': fields.char(
-            'Payment reference', 
-            size=64, 
+            'Payment reference',
+            size=64,
             help="Check number, or short memo"),
         'date': fields.date(
             'Payment Date',
